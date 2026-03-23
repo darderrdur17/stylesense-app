@@ -1,10 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
-import { ChevronDown, ChevronUp, Sparkles } from "lucide-react";
+import { ChevronDown, ChevronUp, ExternalLink, Sparkles } from "lucide-react";
 import { useStore } from "@/lib/store";
 import type { ClothingItem, StyleInspo, StyleTag } from "@/lib/types";
+import { creatorsForStyles } from "@/lib/creator-curated";
+import {
+  instagramTagExploreUrl,
+  tiktokSearchUrl,
+  TREND_BY_TAG,
+} from "@/lib/trend-social";
 import { cn, getCategoryIcon, matchScore } from "@/lib/utils";
 
 const ALL_STYLE_TAGS: StyleTag[] = [
@@ -42,6 +49,25 @@ const TAG_ACCENT: Record<StyleTag, string> = {
   preppy: "#2563EB",
   elegant: "#7C3AED",
 };
+
+function topWardrobeForTag(wardrobe: ClothingItem[], tag: StyleTag): ClothingItem | null {
+  if (wardrobe.length === 0) return null;
+  let best: ClothingItem | null = null;
+  let bestScore = -1;
+  for (const item of wardrobe) {
+    const s = matchScore(item.style, [tag]);
+    if (s > bestScore) {
+      bestScore = s;
+      best = item;
+    }
+  }
+  return bestScore > 0 ? best : null;
+}
+
+function tagsForTrendSection(preferred: StyleTag[]): StyleTag[] {
+  if (preferred.length > 0) return [...new Set(preferred)];
+  return ALL_STYLE_TAGS;
+}
 
 function headerGradientForTags(tags: StyleTag[]): string {
   if (tags.length === 0) return TAG_GRADIENT.casual;
@@ -229,6 +255,7 @@ function InspoCard({
 export default function StyleMatchPage() {
   const [mounted, setMounted] = useState(false);
   const hydrated = useStore((s) => s.hydrated);
+  const user = useStore((s) => s.user);
   const inspirations = useStore((s) => s.inspirations);
   const wardrobe = useStore((s) => s.wardrobe);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -268,6 +295,9 @@ export default function StyleMatchPage() {
     );
   }
 
+  const trendTags = tagsForTrendSection(user.preferredStyles ?? []);
+  const creatorPicks = creatorsForStyles(trendTags);
+
   return (
     <div className="mx-auto max-w-7xl space-y-12 pb-8">
       <motion.header
@@ -282,14 +312,140 @@ export default function StyleMatchPage() {
           </h1>
         </div>
         <p className="mt-2 text-lg text-text-secondary">
-          Find your style inspiration
+          Match your closet to inspiration, trends, and social discovery
         </p>
       </motion.header>
 
       <motion.section
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, delay: 0.05 }}
+        transition={{ duration: 0.45, delay: 0.03 }}
+        className="rounded-2xl border border-border bg-surface p-6 shadow-sm md:p-8"
+      >
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="text-xl font-semibold text-text-primary">
+              Trend pulse &amp; your top pick
+            </h2>
+            <p className="mt-1 text-sm text-text-secondary">
+              For each style you care about: what&apos;s trending now, where to browse on Instagram &
+              TikTok (opens public hashtag / search pages — not affiliated), and your strongest wardrobe
+              match.
+            </p>
+            {(user.preferredStyles?.length ?? 0) === 0 && (
+              <p className="mt-2 text-xs text-primary">
+                Tip: Set <strong>preferred styles</strong> in{" "}
+                <Link href="/app/profile" className="font-semibold underline">
+                  Profile
+                </Link>{" "}
+                to prioritize those tags below. Until then, we show all styles.
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {trendTags.map((tag) => {
+            const trend = TREND_BY_TAG[tag];
+            const top = topWardrobeForTag(wardrobe, tag);
+            return (
+              <div
+                key={tag}
+                className="flex flex-col rounded-xl border border-border bg-surface-alt/50 p-4"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-bold capitalize text-primary">{tag}</span>
+                  {top && (
+                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                      Top in closet
+                    </span>
+                  )}
+                </div>
+                <p className="mt-2 text-sm font-semibold text-text-primary">{trend.headline}</p>
+                <p className="mt-1 text-xs text-text-secondary">{trend.tip}</p>
+                {top && (
+                  <div className="mt-3 flex items-center gap-2 rounded-lg border border-border/80 bg-surface px-3 py-2">
+                    <span className="text-lg" aria-hidden>
+                      {getCategoryIcon(top.category)}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-text-primary">{top.name}</p>
+                      <p className="text-[10px] capitalize text-text-muted">{top.category}</p>
+                    </div>
+                  </div>
+                )}
+                {!top && wardrobe.length > 0 && (
+                  <p className="mt-3 text-xs text-text-muted">Add pieces tagged with “{tag}” to see a top match.</p>
+                )}
+                {wardrobe.length === 0 && (
+                  <p className="mt-3 text-xs text-text-muted">Add items to My Wardrobe to unlock matches.</p>
+                )}
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <a
+                    href={instagramTagExploreUrl(trend.igHashtag)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-xs font-medium text-text-primary transition hover:border-primary/40 hover:bg-primary/5"
+                  >
+                    Instagram
+                    <ExternalLink className="h-3 w-3 shrink-0 opacity-70" aria-hidden />
+                  </a>
+                  <a
+                    href={tiktokSearchUrl(trend.tiktokQuery)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-xs font-medium text-text-primary transition hover:border-primary/40 hover:bg-primary/5"
+                  >
+                    TikTok
+                    <ExternalLink className="h-3 w-3 shrink-0 opacity-70" aria-hidden />
+                  </a>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </motion.section>
+
+      <motion.section
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, delay: 0.06 }}
+        className="rounded-2xl border border-border bg-surface p-6 shadow-sm md:p-8"
+      >
+        <h2 className="text-xl font-semibold text-text-primary">Creators &amp; accounts to explore</h2>
+        <p className="mt-1 text-sm text-text-secondary">
+          Curated picks aligned with your style tags — updated in code (no scraping). Replace with your own
+          partner list or connect official APIs later.
+        </p>
+        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {creatorPicks.map((c) => (
+            <a
+              key={`${c.platform}-${c.url}`}
+              href={c.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex flex-col rounded-xl border border-border bg-surface-alt/50 p-4 transition hover:border-primary/30 hover:bg-primary/[0.03]"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-semibold text-text-primary">{c.name}</span>
+                <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-medium uppercase text-text-muted">
+                  {c.platform}
+                </span>
+              </div>
+              <p className="mt-1 text-xs font-mono text-primary">{c.handle}</p>
+              <p className="mt-2 line-clamp-3 text-xs text-text-secondary">{c.why}</p>
+              <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary">
+                Open profile
+                <ExternalLink className="h-3 w-3" aria-hidden />
+              </span>
+            </a>
+          ))}
+        </div>
+      </motion.section>
+
+      <motion.section
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, delay: 0.1 }}
       >
         <h2 className="mb-6 text-xl font-semibold text-text-primary">
           Style Inspirations

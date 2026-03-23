@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import type { Session } from "next-auth";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "@/components/providers";
 import { auth } from "@/auth";
@@ -40,7 +41,12 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await auth();
+  let session: Session | null = null;
+  try {
+    session = await auth();
+  } catch {
+    session = null;
+  }
   return (
     <html
       lang="en"
