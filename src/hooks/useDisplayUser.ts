@@ -17,6 +17,10 @@ export function useDisplayUser() {
     (session?.user?.email && String(session.user.email).trim()) ||
     "";
   const location = (user.location && user.location.trim()) || "New York";
+  const latitude =
+    user.latitude != null && Number.isFinite(user.latitude) ? user.latitude : null;
+  const longitude =
+    user.longitude != null && Number.isFinite(user.longitude) ? user.longitude : null;
 
-  return { name, email, location };
+  return { name, email, location, latitude, longitude };
 }

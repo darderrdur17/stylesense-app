@@ -117,6 +117,9 @@ export interface UserProfile {
   avatar?: string;
   preferredStyles: StyleTag[];
   location: string;
+  /** When set (with longitude), weather uses these coordinates instead of geocoding the city. */
+  latitude?: number | null;
+  longitude?: number | null;
   temperatureUnit: "celsius" | "fahrenheit";
   joinDate: string;
 }

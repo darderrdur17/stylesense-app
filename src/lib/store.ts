@@ -146,6 +146,8 @@ export const useStore = create<AppState>()(
             name: updates.name,
             email: updates.email,
             location: updates.location,
+            latitude: updates.latitude,
+            longitude: updates.longitude,
             temperatureUnit: updates.temperatureUnit,
             preferredStyles: updates.preferredStyles,
           }).filter(([, v]) => v !== undefined)

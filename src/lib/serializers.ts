@@ -26,6 +26,8 @@ export function userToProfile(u: User): UserProfile {
     avatar: u.avatar ?? "",
     preferredStyles: (u.preferredStyles ?? []) as UserProfile["preferredStyles"],
     location: u.location,
+    ...(u.latitude != null && { latitude: u.latitude }),
+    ...(u.longitude != null && { longitude: u.longitude }),
     temperatureUnit: u.temperatureUnit as UserProfile["temperatureUnit"],
     joinDate: ymd(u.joinDate),
   };

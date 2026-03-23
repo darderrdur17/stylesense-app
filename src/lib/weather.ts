@@ -1,14 +1,23 @@
 import type { WeatherData } from "./types";
 
 /**
- * Current weather for a city — server uses Open-Meteo (no API key).
+ * Current weather — prefers saved coordinates when present; otherwise geocodes `city`.
  */
-export async function getWeatherByCity(city: string): Promise<WeatherData> {
+export async function getCurrentWeather(
+  city: string,
+  coords?: { lat: number; lng: number } | null
+): Promise<WeatherData> {
+  const params = new URLSearchParams();
+  if (coords != null && Number.isFinite(coords.lat) && Number.isFinite(coords.lng)) {
+    params.set("lat", String(coords.lat));
+    params.set("lng", String(coords.lng));
+  } else {
+    params.set("city", city);
+  }
   try {
-    const res = await fetch(
-      `/api/weather/current?city=${encodeURIComponent(city)}`,
-      { credentials: "include" }
-    );
+    const res = await fetch(`/api/weather/current?${params.toString()}`, {
+      credentials: "include",
+    });
     if (!res.ok) throw new Error("weather");
     return res.json() as Promise<WeatherData>;
   } catch {
@@ -16,12 +25,27 @@ export async function getWeatherByCity(city: string): Promise<WeatherData> {
   }
 }
 
-export async function getForecast(city: string, days: number): Promise<WeatherData[]> {
+export async function getWeatherByCity(city: string): Promise<WeatherData> {
+  return getCurrentWeather(city, null);
+}
+
+export async function getForecast(
+  city: string,
+  days: number,
+  coords?: { lat: number; lng: number } | null
+): Promise<WeatherData[]> {
+  const params = new URLSearchParams();
+  params.set("days", String(days));
+  if (coords != null && Number.isFinite(coords.lat) && Number.isFinite(coords.lng)) {
+    params.set("lat", String(coords.lat));
+    params.set("lng", String(coords.lng));
+  } else {
+    params.set("city", city);
+  }
   try {
-    const res = await fetch(
-      `/api/weather/forecast?city=${encodeURIComponent(city)}&days=${String(days)}`,
-      { credentials: "include" }
-    );
+    const res = await fetch(`/api/weather/forecast?${params.toString()}`, {
+      credentials: "include",
+    });
     if (!res.ok) throw new Error("forecast");
     const data = (await res.json()) as { forecast: WeatherData[] };
     return data.forecast;

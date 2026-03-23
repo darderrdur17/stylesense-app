@@ -20,6 +20,7 @@ import type {
   Season,
   StyleTag,
 } from "@/lib/types";
+import { compressImageForUpload } from "@/lib/compress-image";
 import { cn, getCategoryIcon } from "@/lib/utils";
 
 const CATEGORY_TABS: { id: "all" | ClothingCategory; label: string }[] = [
@@ -162,6 +163,7 @@ export default function WardrobePage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(defaultForm);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [aiProviderLabel, setAiProviderLabel] = useState<string | null>(null);
@@ -196,6 +198,7 @@ export default function WardrobePage() {
     setForm(defaultForm);
     setAiError(null);
     setAiProviderLabel(null);
+    setUploadError(null);
     setModalOpen(true);
   };
 
@@ -270,15 +273,36 @@ export default function WardrobePage() {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
+    setUploadError(null);
     try {
+      let uploadBlob: Blob = file;
+      if (!file.type.includes("gif")) {
+        try {
+          uploadBlob = await compressImageForUpload(file);
+        } catch {
+          uploadBlob = file;
+        }
+      }
+      const baseName = file.name.replace(/\.[^/.]+$/, "") || "photo";
+      const uploadFile =
+        uploadBlob === file
+          ? file
+          : new File([uploadBlob], `${baseName}.jpg`, { type: "image/jpeg" });
+
       const fd = new FormData();
-      fd.append("file", file);
+      fd.append("file", uploadFile);
       const res = await fetch("/api/upload", {
         method: "POST",
         body: fd,
         credentials: "include",
       });
-      if (!res.ok) return;
+      if (!res.ok) {
+        const errBody = (await res.json().catch(() => ({}))) as { error?: string };
+        setUploadError(
+          errBody.error ?? `Upload failed (${res.status}). Try a smaller image or set up file storage.`
+        );
+        return;
+      }
       const data = (await res.json()) as {
         url?: string;
         exif?: {
@@ -671,6 +695,11 @@ export default function WardrobePage() {
                       disabled={uploading}
                     />
                   </label>
+                  {uploadError && (
+                    <p className="mt-2 text-xs text-danger" role="alert">
+                      {uploadError}
+                    </p>
+                  )}
                   {form.imageUrl && form.imageUrl !== "/items/placeholder.jpg" && (
                     <p className="mt-2 truncate text-xs text-text-muted" title={form.imageUrl}>
                       Image attached

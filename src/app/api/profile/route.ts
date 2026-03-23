@@ -45,6 +45,8 @@ export async function PATCH(req: Request) {
         ...(data.name !== undefined && { name: data.name.trim() }),
         ...(email !== undefined && { email }),
         ...(data.location !== undefined && { location: data.location.trim() }),
+        ...(data.latitude !== undefined && { latitude: data.latitude }),
+        ...(data.longitude !== undefined && { longitude: data.longitude }),
         ...(data.temperatureUnit !== undefined && { temperatureUnit: data.temperatureUnit }),
         ...(data.preferredStyles !== undefined && { preferredStyles: data.preferredStyles }),
       },

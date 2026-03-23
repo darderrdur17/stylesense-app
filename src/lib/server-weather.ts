@@ -90,15 +90,12 @@ function mockWeather(city: string): WeatherData {
   };
 }
 
-/**
- * Current + today's high/low via Open-Meteo (free, no API key).
- */
-export async function fetchCurrentWeatherByCity(city: string): Promise<WeatherData> {
-  const coords = await geocodeCity(city);
-  if (!coords) return mockWeather(city);
-
+async function fetchCurrentWeatherAtCoords(
+  latitude: number,
+  longitude: number,
+  mockLabel: string
+): Promise<WeatherData> {
   try {
-    const { latitude, longitude } = coords;
     const res = await fetch(
       `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}` +
         `&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,apparent_temperature` +
@@ -106,7 +103,7 @@ export async function fetchCurrentWeatherByCity(city: string): Promise<WeatherDa
         `&forecast_days=1&timezone=auto`,
       { next: { revalidate: 300 } }
     );
-    if (!res.ok) return mockWeather(city);
+    if (!res.ok) return mockWeather(mockLabel);
     const data = (await res.json()) as {
       current?: {
         temperature_2m: number;
@@ -121,7 +118,7 @@ export async function fetchCurrentWeatherByCity(city: string): Promise<WeatherDa
       };
     };
     const cur = data.current;
-    if (!cur) return mockWeather(city);
+    if (!cur) return mockWeather(mockLabel);
 
     const code = Math.round(cur.weather_code);
     const high = data.daily?.temperature_2m_max?.[0] ?? cur.temperature_2m + 2;
@@ -139,21 +136,31 @@ export async function fetchCurrentWeatherByCity(city: string): Promise<WeatherDa
       low,
     };
   } catch {
-    return mockWeather(city);
+    return mockWeather(mockLabel);
   }
 }
 
 /**
- * Multi-day forecast via Open-Meteo (free, no API key; up to 16 days).
+ * Current + today's high/low via Open-Meteo (free, no API key).
  */
-export async function fetchForecastByCity(city: string, days: number): Promise<WeatherData[]> {
+export async function fetchCurrentWeatherByCity(city: string): Promise<WeatherData> {
   const coords = await geocodeCity(city);
-  if (!coords) return mockForecast(days);
+  if (!coords) return mockWeather(city);
+  return fetchCurrentWeatherAtCoords(coords.latitude, coords.longitude, city);
+}
 
+export async function fetchCurrentWeatherByCoords(lat: number, lng: number): Promise<WeatherData> {
+  return fetchCurrentWeatherAtCoords(lat, lng, "your location");
+}
+
+async function fetchForecastAtCoords(
+  latitude: number,
+  longitude: number,
+  days: number
+): Promise<WeatherData[]> {
   const forecastDays = Math.min(Math.max(1, days), 16);
 
   try {
-    const { latitude, longitude } = coords;
     const res = await fetch(
       `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}` +
         `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum` +
@@ -197,6 +204,23 @@ export async function fetchForecastByCity(city: string, days: number): Promise<W
   } catch {
     return mockForecast(days);
   }
+}
+
+/**
+ * Multi-day forecast via Open-Meteo (free, no API key; up to 16 days).
+ */
+export async function fetchForecastByCity(city: string, days: number): Promise<WeatherData[]> {
+  const coords = await geocodeCity(city);
+  if (!coords) return mockForecast(days);
+  return fetchForecastAtCoords(coords.latitude, coords.longitude, days);
+}
+
+export async function fetchForecastByCoords(
+  lat: number,
+  lng: number,
+  days: number
+): Promise<WeatherData[]> {
+  return fetchForecastAtCoords(lat, lng, days);
 }
 
 function mockForecast(days: number): WeatherData[] {

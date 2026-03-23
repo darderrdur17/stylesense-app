@@ -32,7 +32,7 @@ export const createClothingSchema = z.object({
   colorHex: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
   season: z.array(seasonSchema).min(1),
   style: z.array(styleTagSchema).min(1),
-  imageUrl: z.string().min(1).max(2_000_000),
+  imageUrl: z.string().min(1).max(10_000_000),
   warmthLevel: z.number().int().min(1).max(5),
   waterproof: z.boolean(),
   favorite: z.boolean().optional(),
@@ -109,6 +109,8 @@ export const updateProfileSchema = z.object({
   name: z.string().min(1).max(120).optional(),
   email: z.string().email().optional(),
   location: z.string().min(1).max(200).optional(),
+  latitude: z.union([z.number().gte(-90).lte(90), z.null()]).optional(),
+  longitude: z.union([z.number().gte(-180).lte(180), z.null()]).optional(),
   temperatureUnit: z.enum(["celsius", "fahrenheit"]).optional(),
   preferredStyles: z.array(styleTagSchema).optional(),
 });

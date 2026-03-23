@@ -15,6 +15,9 @@ model User {
   avatar          String?
   preferredStyles String[] @default([])
   location        String   @default("New York")
+  /// Saved from "Use current location" for weather; optional when only city text is used
+  latitude        Float?
+  longitude       Float?
   temperatureUnit String   @default("celsius")
   joinDate        DateTime @default(now())
   createdAt       DateTime @default(now())

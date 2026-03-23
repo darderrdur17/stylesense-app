@@ -4,7 +4,8 @@ import { getUserIdOr401 } from "@/lib/require-auth";
 import { parseExifFromBuffer } from "@/lib/server-exif";
 import { reverseGeocodePlace } from "@/lib/server-geocode";
 
-const MAX_INLINE = 900_000;
+/** ~2.1MB raw JPEG after base64; aligns with wardrobe imageUrl validation when Blob is unset */
+const MAX_INLINE = 2_800_000;
 
 async function exifPayload(buf: Buffer) {
   const parsed = await parseExifFromBuffer(buf);

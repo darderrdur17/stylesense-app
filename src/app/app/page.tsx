@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { useDisplayUser } from "@/hooks/useDisplayUser";
 import { useStore } from "@/lib/store";
-import { getWeatherByCity } from "@/lib/weather";
+import { getCurrentWeather } from "@/lib/weather";
 import type { ClothingItem, OutfitMemory, WeatherData } from "@/lib/types";
 import {
   cn,
@@ -88,7 +88,12 @@ export default function AppDashboardPage() {
   const [mounted, setMounted] = useState(false);
   const hydrated = useStore((s) => s.hydrated);
   const user = useStore((s) => s.user);
-  const { name: displayName, location: displayLocation } = useDisplayUser();
+  const {
+    name: displayName,
+    location: displayLocation,
+    latitude: profileLat,
+    longitude: profileLng,
+  } = useDisplayUser();
   const wardrobe = useStore((s) => s.wardrobe);
   const memories = useStore((s) => s.memories);
   const trips = useStore((s) => s.trips);
@@ -110,7 +115,11 @@ export default function AppDashboardPage() {
     let cancelled = false;
     setWeatherLoading(true);
     setWeatherError(false);
-    getWeatherByCity(displayLocation)
+    const coords =
+      profileLat != null && profileLng != null
+        ? { lat: profileLat, lng: profileLng }
+        : null;
+    getCurrentWeather(displayLocation, coords)
       .then((w) => {
         if (!cancelled) {
           setWeather(w);
@@ -125,7 +134,7 @@ export default function AppDashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [mounted, displayLocation]);
+  }, [mounted, displayLocation, profileLat, profileLng]);
 
   const suggestedOutfit = useMemo(() => {
     if (!weather || wardrobe.length === 0) return [];

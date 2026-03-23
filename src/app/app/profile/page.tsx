@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { motion } from "framer-motion";
-import { Bell, Moon, UserRound } from "lucide-react";
+import { Bell, Moon, Navigation, UserRound } from "lucide-react";
 import { useStore } from "@/lib/store";
 import type { StyleTag } from "@/lib/types";
 import { cn, initialsFromName } from "@/lib/utils";
@@ -46,6 +46,10 @@ export default function ProfilePage() {
   const [preferredStyles, setPreferredStyles] = useState<StyleTag[]>([]);
   const [notificationsOn, setNotificationsOn] = useState(true);
   const [darkModeOn, setDarkModeOn] = useState(false);
+  const [profileLat, setProfileLat] = useState<number | null>(null);
+  const [profileLng, setProfileLng] = useState<number | null>(null);
+  const [geoBusy, setGeoBusy] = useState(false);
+  const [geoError, setGeoError] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -58,7 +62,49 @@ export default function ProfilePage() {
     setLocation(user.location);
     setTemperatureUnit(user.temperatureUnit);
     setPreferredStyles([...user.preferredStyles]);
+    setProfileLat(user.latitude ?? null);
+    setProfileLng(user.longitude ?? null);
   }, [mounted, user]);
+
+  const handleUseCurrentLocation = () => {
+    setGeoError(null);
+    if (!navigator.geolocation) {
+      setGeoError("Location is not supported in this browser.");
+      return;
+    }
+    setGeoBusy(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setProfileLat(lat);
+        setProfileLng(lng);
+        try {
+          const r = await fetch(
+            `/api/geocode/reverse?lat=${encodeURIComponent(String(lat))}&lng=${encodeURIComponent(String(lng))}`,
+            { credentials: "include" }
+          );
+          const data = (await r.json()) as { label?: string };
+          if (r.ok && data.label) setLocation(data.label);
+        } catch {
+          /* keep existing location text */
+        } finally {
+          setGeoBusy(false);
+        }
+      },
+      (err) => {
+        setGeoError(err.message || "Could not get your location.");
+        setGeoBusy(false);
+      },
+      { enableHighAccuracy: false, timeout: 15000, maximumAge: 60_000 }
+    );
+  };
+
+  const clearSavedCoords = () => {
+    setProfileLat(null);
+    setProfileLng(null);
+    setGeoError(null);
+  };
 
   const summary = useMemo(() => {
     const total = wardrobe.length;
@@ -99,6 +145,8 @@ export default function ProfilePage() {
       location,
       temperatureUnit,
       preferredStyles,
+      latitude: profileLat,
+      longitude: profileLng,
     });
   };
 
@@ -197,6 +245,36 @@ export default function ProfilePage() {
               onChange={(e) => setLocation(e.target.value)}
               className="mt-1.5 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-text-primary outline-none ring-primary/20 transition focus:border-primary focus:ring-2"
             />
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => void handleUseCurrentLocation()}
+                disabled={geoBusy}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-alt px-3 py-1.5 text-xs font-medium text-text-secondary transition hover:border-primary/40 hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Navigation className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                {geoBusy ? "Getting location…" : "Use current location"}
+              </button>
+              {(profileLat != null || profileLng != null) && (
+                <button
+                  type="button"
+                  onClick={clearSavedCoords}
+                  className="text-xs font-medium text-text-muted underline-offset-2 hover:text-text-primary hover:underline"
+                >
+                  Clear saved coordinates
+                </button>
+              )}
+            </div>
+            {geoError && (
+              <p className="mt-2 text-xs text-danger" role="alert">
+                {geoError}
+              </p>
+            )}
+            {(profileLat != null || profileLng != null) && (
+              <p className="mt-2 text-xs text-text-muted">
+                Weather uses your saved coordinates. City name is for display only.
+              </p>
+            )}
           </div>
         </div>
       </motion.section>
