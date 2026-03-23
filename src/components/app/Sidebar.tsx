@@ -17,7 +17,7 @@ import {
   User,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
-import { useStore } from "@/lib/store";
+import { useDisplayUser } from "@/hooks/useDisplayUser";
 import { cn, initialsFromName } from "@/lib/utils";
 
 const navItems = [
@@ -46,8 +46,8 @@ type SidebarProps = {
 
 export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   const pathname = usePathname();
-  const user = useStore((s) => s.user);
-  const initials = initialsFromName(user.name || "?");
+  const { name, email } = useDisplayUser();
+  const initials = initialsFromName(name || "?");
 
   useEffect(() => {
     if (mobileOpen) {
@@ -126,9 +126,9 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-text-primary">
-            {user.name || "Account"}
+            {name || "Account"}
           </p>
-          <p className="truncate text-xs text-text-muted">{user.email || "—"}</p>
+          <p className="truncate text-xs text-text-muted">{email || "—"}</p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
           <Link

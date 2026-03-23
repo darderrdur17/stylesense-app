@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Bell, Menu, Search } from "lucide-react";
-import { useStore } from "@/lib/store";
+import { useDisplayUser } from "@/hooks/useDisplayUser";
 import { initialsFromName } from "@/lib/utils";
 
 type AppHeaderProps = {
@@ -12,8 +12,8 @@ type AppHeaderProps = {
 };
 
 export function AppHeader({ title, subtitle, onMenuToggle }: AppHeaderProps) {
-  const user = useStore((s) => s.user);
-  const initials = initialsFromName(user.name || "?");
+  const { name } = useDisplayUser();
+  const initials = initialsFromName(name || "?");
 
   return (
     <header className="sticky top-0 z-30 border-b border-border/70 bg-surface/80 backdrop-blur-xl">

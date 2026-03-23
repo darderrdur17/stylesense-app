@@ -101,8 +101,15 @@ export const useStore = create<AppState>()(
         }),
 
       bootstrap: async () => {
+        const controller = new AbortController();
+        const timeoutMs = 25_000;
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
         try {
-          const res = await fetch("/api/me", { credentials: "include" });
+          const res = await fetch("/api/me", {
+            credentials: "include",
+            cache: "no-store",
+            signal: controller.signal,
+          });
           if (!res.ok) {
             set({ hydrated: true });
             return;
@@ -126,6 +133,8 @@ export const useStore = create<AppState>()(
           });
         } catch {
           set({ hydrated: true });
+        } finally {
+          clearTimeout(timeoutId);
         }
       },
 
