@@ -79,6 +79,7 @@ function buildDayOutfit(
 
 export default function PlannerPage() {
   const [mounted, setMounted] = useState(false);
+  const hydrated = useStore((s) => s.hydrated);
   const wardrobe = useStore((s) => s.wardrobe);
   const trips = useStore((s) => s.trips);
   const addTrip = useStore((s) => s.addTrip);
@@ -168,14 +169,14 @@ export default function PlannerPage() {
     }
   };
 
-  const handleSaveTrip = () => {
+  const handleSaveTrip = async () => {
     if (draftDays.length === 0) return;
     const packingSet = new Set<string>();
     draftDays.forEach((d) => {
       d.dayOutfit.items.forEach((id) => packingSet.add(id));
       d.eveningOutfit?.items.forEach((id) => packingSet.add(id));
     });
-    addTrip({
+    await addTrip({
       destination: draftDestination,
       startDate: draftStart,
       endDate: draftEnd,
@@ -189,7 +190,7 @@ export default function PlannerPage() {
     setDraftEnd("");
   };
 
-  if (!mounted) {
+  if (!mounted || !hydrated) {
     return <PlannerSkeleton />;
   }
 

@@ -1,0 +1,3 @@
+cd /Users/derr/Documents/Random/StyleSense/stylesense-app
+npm install
+npm run dev

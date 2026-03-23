@@ -4,120 +4,291 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import {
   ClothingItem,
+  FeedbackStats,
   OutfitMemory,
   TripPlan,
   UserProfile,
   StyleInspo,
+  WeatherData,
 } from "./types";
-import {
-  sampleWardrobe,
-  sampleMemories,
-  sampleTrips,
-  sampleInspirations,
-  sampleUser,
-} from "./data";
-import { generateId } from "./utils";
+const emptyUser: UserProfile = {
+  name: "",
+  email: "",
+  avatar: "",
+  preferredStyles: [],
+  location: "New York",
+  temperatureUnit: "celsius",
+  joinDate: new Date().toISOString().slice(0, 10),
+};
+
+function patchBodyFromClothing(updates: Partial<ClothingItem>): Record<string, unknown> {
+  const body: Record<string, unknown> = {};
+  if (updates.name !== undefined) body.name = updates.name;
+  if (updates.category !== undefined) body.category = updates.category;
+  if (updates.color !== undefined) body.color = updates.color;
+  if (updates.colorHex !== undefined) body.colorHex = updates.colorHex;
+  if (updates.season !== undefined) body.season = updates.season;
+  if (updates.style !== undefined) body.style = updates.style;
+  if (updates.imageUrl !== undefined) body.imageUrl = updates.imageUrl;
+  if (updates.warmthLevel !== undefined) body.warmthLevel = updates.warmthLevel;
+  if (updates.waterproof !== undefined) body.waterproof = updates.waterproof;
+  if (updates.favorite !== undefined) body.favorite = updates.favorite;
+  if (updates.photoCapturedAt !== undefined) body.photoCapturedAt = updates.photoCapturedAt;
+  if (updates.photoLat !== undefined) body.photoLat = updates.photoLat;
+  if (updates.photoLng !== undefined) body.photoLng = updates.photoLng;
+  if (updates.photoPlaceLabel !== undefined) body.photoPlaceLabel = updates.photoPlaceLabel;
+  return body;
+}
 
 interface AppState {
+  hydrated: boolean;
   user: UserProfile;
   wardrobe: ClothingItem[];
   memories: OutfitMemory[];
   trips: TripPlan[];
   inspirations: StyleInspo[];
+  feedbackStats: FeedbackStats;
   isOnboarded: boolean;
 
-  setUser: (user: Partial<UserProfile>) => void;
+  reset: () => void;
+  bootstrap: () => Promise<void>;
+
+  setUser: (user: Partial<UserProfile>) => Promise<void>;
   setOnboarded: (v: boolean) => void;
 
-  addClothingItem: (item: Omit<ClothingItem, "id" | "dateAdded" | "wearCount">) => void;
-  removeClothingItem: (id: string) => void;
-  updateClothingItem: (id: string, updates: Partial<ClothingItem>) => void;
-  toggleFavorite: (id: string) => void;
+  addClothingItem: (
+    item: Omit<ClothingItem, "id" | "dateAdded" | "wearCount">
+  ) => Promise<void>;
+  removeClothingItem: (id: string) => Promise<void>;
+  updateClothingItem: (id: string, updates: Partial<ClothingItem>) => Promise<void>;
+  toggleFavorite: (id: string) => Promise<void>;
 
-  addMemory: (memory: Omit<OutfitMemory, "id">) => void;
-  removeMemory: (id: string) => void;
+  addMemory: (memory: Omit<OutfitMemory, "id">) => Promise<void>;
+  removeMemory: (id: string) => Promise<void>;
 
-  addTrip: (trip: Omit<TripPlan, "id">) => void;
-  updateTrip: (id: string, updates: Partial<TripPlan>) => void;
-  removeTrip: (id: string) => void;
+  addTrip: (trip: Omit<TripPlan, "id">) => Promise<void>;
+  updateTrip: (id: string, updates: Partial<TripPlan>) => Promise<void>;
+  removeTrip: (id: string) => Promise<void>;
+
+  submitOutfitFeedback: (input: {
+    liked: boolean;
+    itemIds: string[];
+    weather: WeatherData;
+  }) => Promise<boolean>;
 }
 
 export const useStore = create<AppState>()(
   persist(
-    (set) => ({
-      user: sampleUser,
-      wardrobe: sampleWardrobe,
-      memories: sampleMemories,
-      trips: sampleTrips,
-      inspirations: sampleInspirations,
+    (set, get) => ({
+      hydrated: false,
+      user: emptyUser,
+      wardrobe: [],
+      memories: [],
+      trips: [],
+      inspirations: [],
+      feedbackStats: { total: 0, thumbsUp: 0 },
       isOnboarded: false,
 
-      setUser: (updates) =>
-        set((s) => ({ user: { ...s.user, ...updates } })),
+      reset: () =>
+        set({
+          hydrated: false,
+          user: emptyUser,
+          wardrobe: [],
+          memories: [],
+          trips: [],
+          inspirations: [],
+          feedbackStats: { total: 0, thumbsUp: 0 },
+        }),
+
+      bootstrap: async () => {
+        try {
+          const res = await fetch("/api/me", { credentials: "include" });
+          if (!res.ok) {
+            set({ hydrated: true });
+            return;
+          }
+          const data = (await res.json()) as {
+            user: UserProfile;
+            wardrobe: ClothingItem[];
+            memories: OutfitMemory[];
+            trips: TripPlan[];
+            inspirations: StyleInspo[];
+            feedbackStats?: FeedbackStats;
+          };
+          set({
+            user: data.user,
+            wardrobe: data.wardrobe,
+            memories: data.memories,
+            trips: data.trips,
+            inspirations: data.inspirations,
+            feedbackStats: data.feedbackStats ?? { total: 0, thumbsUp: 0 },
+            hydrated: true,
+          });
+        } catch {
+          set({ hydrated: true });
+        }
+      },
 
       setOnboarded: (v) => set({ isOnboarded: v }),
 
-      addClothingItem: (item) =>
-        set((s) => ({
-          wardrobe: [
-            ...s.wardrobe,
-            {
-              ...item,
-              id: generateId(),
-              dateAdded: new Date().toISOString().split("T")[0],
-              wearCount: 0,
-            },
-          ],
-        })),
+      setUser: async (updates) => {
+        const payload = Object.fromEntries(
+          Object.entries({
+            name: updates.name,
+            email: updates.email,
+            location: updates.location,
+            temperatureUnit: updates.temperatureUnit,
+            preferredStyles: updates.preferredStyles,
+          }).filter(([, v]) => v !== undefined)
+        );
+        const res = await fetch("/api/profile", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) return;
+        const data = (await res.json()) as { user: UserProfile };
+        set({ user: data.user });
+      },
 
-      removeClothingItem: (id) =>
-        set((s) => ({
-          wardrobe: s.wardrobe.filter((i) => i.id !== id),
-        })),
+      addClothingItem: async (item) => {
+        const res = await fetch("/api/wardrobe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            name: item.name,
+            category: item.category,
+            color: item.color,
+            colorHex: item.colorHex,
+            season: item.season,
+            style: item.style,
+            imageUrl: item.imageUrl,
+            warmthLevel: item.warmthLevel,
+            waterproof: item.waterproof,
+            favorite: item.favorite ?? false,
+            ...(item.photoCapturedAt && { photoCapturedAt: item.photoCapturedAt }),
+            ...(item.photoLat != null && { photoLat: item.photoLat }),
+            ...(item.photoLng != null && { photoLng: item.photoLng }),
+            ...(item.photoPlaceLabel && { photoPlaceLabel: item.photoPlaceLabel }),
+          }),
+        });
+        if (!res.ok) return;
+        const data = (await res.json()) as { item: ClothingItem };
+        set((s) => ({ wardrobe: [data.item, ...s.wardrobe] }));
+      },
 
-      updateClothingItem: (id, updates) =>
-        set((s) => ({
-          wardrobe: s.wardrobe.map((i) =>
-            i.id === id ? { ...i, ...updates } : i
-          ),
-        })),
+      removeClothingItem: async (id) => {
+        const res = await fetch(`/api/wardrobe/${id}`, {
+          method: "DELETE",
+          credentials: "include",
+        });
+        if (!res.ok) return;
+        set((s) => ({ wardrobe: s.wardrobe.filter((i) => i.id !== id) }));
+      },
 
-      toggleFavorite: (id) =>
+      updateClothingItem: async (id, updates) => {
+        const res = await fetch(`/api/wardrobe/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(patchBodyFromClothing(updates)),
+        });
+        if (!res.ok) return;
+        const data = (await res.json()) as { item: ClothingItem };
         set((s) => ({
-          wardrobe: s.wardrobe.map((i) =>
-            i.id === id ? { ...i, favorite: !i.favorite } : i
-          ),
-        })),
+          wardrobe: s.wardrobe.map((i) => (i.id === id ? data.item : i)),
+        }));
+      },
 
-      addMemory: (memory) =>
-        set((s) => ({
-          memories: [{ ...memory, id: generateId() }, ...s.memories],
-        })),
+      toggleFavorite: async (id) => {
+        const item = get().wardrobe.find((i) => i.id === id);
+        if (!item) return;
+        await get().updateClothingItem(id, { favorite: !item.favorite });
+      },
 
-      removeMemory: (id) =>
-        set((s) => ({
-          memories: s.memories.filter((m) => m.id !== id),
-        })),
+      addMemory: async (memory) => {
+        const res = await fetch("/api/memories", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            outfit: memory.outfit,
+            photoUrl: memory.photoUrl,
+            location: memory.location,
+            locationCoords: memory.locationCoords,
+            weather: memory.weather,
+            date: memory.date,
+            mood: memory.mood,
+            notes: memory.notes,
+          }),
+        });
+        if (!res.ok) return;
+        const data = (await res.json()) as { memory: OutfitMemory };
+        set((s) => ({ memories: [data.memory, ...s.memories] }));
+      },
 
-      addTrip: (trip) =>
-        set((s) => ({
-          trips: [...s.trips, { ...trip, id: generateId() }],
-        })),
+      removeMemory: async (id) => {
+        const res = await fetch(`/api/memories/${id}`, {
+          method: "DELETE",
+          credentials: "include",
+        });
+        if (!res.ok) return;
+        set((s) => ({ memories: s.memories.filter((m) => m.id !== id) }));
+      },
 
-      updateTrip: (id, updates) =>
-        set((s) => ({
-          trips: s.trips.map((t) =>
-            t.id === id ? { ...t, ...updates } : t
-          ),
-        })),
+      addTrip: async (trip) => {
+        const res = await fetch("/api/trips", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(trip),
+        });
+        if (!res.ok) return;
+        const data = (await res.json()) as { trip: TripPlan };
+        set((s) => ({ trips: [...s.trips, data.trip] }));
+      },
 
-      removeTrip: (id) =>
+      updateTrip: async (id, updates) => {
+        const res = await fetch(`/api/trips/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(updates),
+        });
+        if (!res.ok) return;
+        const data = (await res.json()) as { trip: TripPlan };
         set((s) => ({
-          trips: s.trips.filter((t) => t.id !== id),
-        })),
+          trips: s.trips.map((t) => (t.id === id ? data.trip : t)),
+        }));
+      },
+
+      removeTrip: async (id) => {
+        const res = await fetch(`/api/trips/${id}`, {
+          method: "DELETE",
+          credentials: "include",
+        });
+        if (!res.ok) return;
+        set((s) => ({ trips: s.trips.filter((t) => t.id !== id) }));
+      },
+
+      submitOutfitFeedback: async ({ liked, itemIds, weather }) => {
+        const res = await fetch("/api/outfit-feedback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ liked, itemIds, weather }),
+        });
+        if (!res.ok) return false;
+        const data = (await res.json()) as { feedbackStats: FeedbackStats };
+        set({ feedbackStats: data.feedbackStats });
+        return true;
+      },
     }),
     {
-      name: "stylesense-storage",
+      name: "stylesense-ui",
+      partialize: (state) => ({ isOnboarded: state.isOnboarded }),
     }
   )
 );

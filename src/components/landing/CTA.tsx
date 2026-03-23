@@ -31,7 +31,7 @@ export function CTA() {
             </p>
             <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
               <Link
-                href="/app"
+                href="/register"
                 className="inline-flex items-center gap-2 rounded-full bg-white px-8 py-3.5 text-sm font-semibold text-primary shadow-xl transition hover:bg-white/90"
               >
                 Start Styling Free

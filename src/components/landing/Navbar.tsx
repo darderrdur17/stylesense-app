@@ -58,7 +58,13 @@ export function Navbar() {
             </a>
           ))}
           <Link
-            href="/app"
+            href="/login"
+            className="text-sm font-medium text-text-secondary transition-colors hover:text-primary"
+          >
+            Sign in
+          </Link>
+          <Link
+            href="/register"
             className="gradient-bg rounded-full px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary/25 transition hover:opacity-95"
           >
             Get Started
@@ -119,9 +125,16 @@ export function Navbar() {
                   </a>
                 ))}
               </div>
-              <div className="border-t border-border/50 p-4">
+              <div className="flex flex-col gap-2 border-t border-border/50 p-4">
                 <Link
-                  href="/app"
+                  href="/login"
+                  className="flex w-full items-center justify-center rounded-full border border-border py-3 text-sm font-semibold text-text-primary transition hover:bg-surface-alt"
+                  onClick={() => setOpen(false)}
+                >
+                  Sign in
+                </Link>
+                <Link
+                  href="/register"
                   className="gradient-bg flex w-full items-center justify-center rounded-full py-3 text-sm font-semibold text-white shadow-lg shadow-primary/25"
                   onClick={() => setOpen(false)}
                 >

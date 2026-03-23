@@ -1,100 +1,56 @@
-import { WeatherData, WeatherCondition } from "./types";
+import type { WeatherData } from "./types";
 
-const API_KEY = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY;
-const BASE_URL = "https://api.openweathermap.org/data/2.5";
-
-function mapCondition(id: number): WeatherCondition {
-  if (id >= 200 && id < 300) return "stormy";
-  if (id >= 300 && id < 400) return "rainy";
-  if (id >= 500 && id < 600) return "rainy";
-  if (id >= 600 && id < 700) return "snowy";
-  if (id >= 700 && id < 800) return "foggy";
-  if (id === 800) return "sunny";
-  return "cloudy";
-}
-
+/**
+ * Current weather for a city — server uses Open-Meteo (no API key).
+ */
 export async function getWeatherByCity(city: string): Promise<WeatherData> {
-  if (!API_KEY) return getMockWeather(city);
-
   try {
     const res = await fetch(
-      `${BASE_URL}/weather?q=${encodeURIComponent(city)}&units=metric&appid=${API_KEY}`
+      `/api/weather/current?city=${encodeURIComponent(city)}`,
+      { credentials: "include" }
     );
-    if (!res.ok) return getMockWeather(city);
-    const data = await res.json();
-
-    return {
-      temp: data.main.temp,
-      feelsLike: data.main.feels_like,
-      condition: mapCondition(data.weather[0].id),
-      description: data.weather[0].description,
-      humidity: data.main.humidity,
-      windSpeed: data.wind.speed,
-      icon: data.weather[0].icon,
-      high: data.main.temp_max,
-      low: data.main.temp_min,
-    };
+    if (!res.ok) throw new Error("weather");
+    return res.json() as Promise<WeatherData>;
   } catch {
     return getMockWeather(city);
   }
 }
 
-export async function getForecast(
-  city: string,
-  days: number
-): Promise<WeatherData[]> {
-  if (!API_KEY) return getMockForecast(days);
-
+export async function getForecast(city: string, days: number): Promise<WeatherData[]> {
   try {
     const res = await fetch(
-      `${BASE_URL}/forecast?q=${encodeURIComponent(city)}&units=metric&appid=${API_KEY}`
+      `/api/weather/forecast?city=${encodeURIComponent(city)}&days=${String(days)}`,
+      { credentials: "include" }
     );
-    if (!res.ok) return getMockForecast(days);
-    const data = await res.json();
-
-    const dailyMap = new Map<string, typeof data.list>();
-    for (const entry of data.list) {
-      const day = entry.dt_txt.split(" ")[0];
-      if (!dailyMap.has(day)) dailyMap.set(day, []);
-      dailyMap.get(day)!.push(entry);
-    }
-
-    const forecasts: WeatherData[] = [];
-    for (const [, entries] of dailyMap) {
-      if (forecasts.length >= days) break;
-      const mid = entries[Math.floor(entries.length / 2)];
-      const temps = entries.map((e: { main: { temp: number } }) => e.main.temp);
-      forecasts.push({
-        temp: mid.main.temp,
-        feelsLike: mid.main.feels_like,
-        condition: mapCondition(mid.weather[0].id),
-        description: mid.weather[0].description,
-        humidity: mid.main.humidity,
-        windSpeed: mid.wind.speed,
-        icon: mid.weather[0].icon,
-        high: Math.max(...temps),
-        low: Math.min(...temps),
-      });
-    }
-
-    return forecasts;
+    if (!res.ok) throw new Error("forecast");
+    const data = (await res.json()) as { forecast: WeatherData[] };
+    return data.forecast;
   } catch {
     return getMockForecast(days);
   }
 }
 
+export async function getHistoricalWeather(
+  location: string,
+  dateYmd: string
+): Promise<WeatherData | null> {
+  try {
+    const res = await fetch(
+      `/api/weather/historical?location=${encodeURIComponent(location)}&date=${encodeURIComponent(dateYmd)}`,
+      { credentials: "include" }
+    );
+    if (!res.ok) return null;
+    return res.json() as Promise<WeatherData>;
+  } catch {
+    return null;
+  }
+}
+
 function getMockWeather(city: string): WeatherData {
   const hash = city.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
-  const conditions: WeatherCondition[] = [
-    "sunny",
-    "cloudy",
-    "rainy",
-    "sunny",
-    "cloudy",
-  ];
+  const conditions = ["sunny", "cloudy", "rainy", "sunny", "cloudy"] as const;
   const condition = conditions[hash % conditions.length];
   const baseTemp = 15 + (hash % 15);
-
   return {
     temp: baseTemp,
     feelsLike: baseTemp - 2,
@@ -109,7 +65,7 @@ function getMockWeather(city: string): WeatherData {
 }
 
 function getMockForecast(days: number): WeatherData[] {
-  const conditions: WeatherCondition[] = [
+  const conditions = [
     "sunny",
     "cloudy",
     "rainy",
@@ -117,7 +73,7 @@ function getMockForecast(days: number): WeatherData[] {
     "cloudy",
     "sunny",
     "rainy",
-  ];
+  ] as const;
   return Array.from({ length: days }, (_, i) => ({
     temp: 18 + Math.floor(Math.random() * 10),
     feelsLike: 16 + Math.floor(Math.random() * 10),

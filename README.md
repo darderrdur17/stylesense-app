@@ -8,31 +8,44 @@
 
 ---
 
-## Features
+## Features (MVP)
 
 | Area | Description |
 |------|-------------|
+| **Auth** | Email + password (register at `/register`, sign in at `/login`) |
 | **Marketing site** | Landing page with features, showcase, how it works, testimonials, pricing, CTA |
-| **Dashboard** | Today’s weather, AI outfit suggestion, quick stats, recent memories |
-| **Digital wardrobe** | Add, filter, sort, and favorite clothing items (persisted locally) |
-| **Outfit memory** | Timeline of past outfits with location and weather context |
-| **Travel planner** | Destination + dates, forecast-based daily outfit ideas, saved trips |
-| **Style match** | Inspiration cards and tag-based matching against your wardrobe |
-| **Analytics** | Charts for categories, colors, styles, seasons, and wear frequency |
-| **Profile** | Preferences and wardrobe summary |
+| **Dashboard** | Today’s weather, rule-based outfit suggestion, stats, recent memories |
+| **Digital wardrobe** | Add items with optional photo upload; data stored per user in PostgreSQL |
+| **Outfit memory** | Timeline with optional **historical weather** (Open-Meteo archive by place + date) |
+| **Travel planner** | Destination + dates, **forecast** via Open-Meteo (server-side, no API key), saved trips |
+| **Style match** | Inspiration cards and tag-based wardrobe scoring |
+| **Analytics** | Charts for categories, colors, styles, seasons |
+| **Profile** | Preferences synced to the database |
+| **Suggestion feedback** | Dashboard “Love it” / “Not quite” saves feedback with item IDs + weather snapshot for tuning |
+| **Photo EXIF + place** | Upload parses EXIF (date, GPS); reverse geocoding fills place; optional fields editable before save |
+| **AI garment detection** | After upload, **Detect garment with AI** uses **Gemini** (`GEMINI_API_KEY`) when set, else **OpenAI** (`OPENAI_API_KEY`) |
+| **Geocoding** | `GET /api/geocode/reverse?lat=&lng=` (Open-Meteo, auth required) |
 
-Data is stored in the browser via **Zustand** + `localStorage` (demo-friendly; production would use a backend).
+Client state uses **Zustand**; all wardrobe and profile data is loaded and saved through **REST API routes** backed by **Prisma** + **PostgreSQL**.
+
+After pulling schema changes, sync the database: `npx prisma db push` or `npx prisma migrate dev`.
 
 ---
 
 ## Tech stack
 
 - **Framework:** [Next.js](https://nextjs.org/) 16 (App Router)
+- **Auth:** [Auth.js / next-auth](https://authjs.dev/) v5 (credentials)
+- **Database:** [PostgreSQL](https://www.postgresql.org/) + [Prisma](https://www.prisma.io/) ORM
 - **UI:** React 19, [Tailwind CSS](https://tailwindcss.com/) 4
-- **State:** [Zustand](https://github.com/pmndrs/zustand) with persistence
+- **State:** [Zustand](https://github.com/pmndrs/zustand)
 - **Charts:** [Recharts](https://recharts.org/)
 - **Motion:** [Framer Motion](https://www.framer.com/motion/)
 - **Icons:** [Lucide React](https://lucide.dev/)
+- **Optional uploads:** [Vercel Blob](https://vercel.com/docs/storage/vercel-blob) (falls back to inline data URLs for small images in dev)
+- **EXIF:** [exifr](https://github.com/MikeKovarik/exifr) on the server during upload
+- **Weather:** [Open-Meteo](https://open-meteo.com/) (forecast, geocoding, archive — no API key)
+- **Garment AI:** [Google Gemini](https://ai.google.dev/) (primary) or [OpenAI](https://platform.openai.com/) vision
 
 ---
 
@@ -40,24 +53,160 @@ Data is stored in the browser via **Zustand** + `localStorage` (demo-friendly; p
 
 - **Node.js** 20+ (recommended)
 - **npm** (or pnpm / yarn)
+- **PostgreSQL** database (local or hosted, e.g. [Neon](https://neon.tech))
 
 ---
 
-## Getting started
+## Full setup (local)
 
-```bash
-# Clone the repository
-git clone https://github.com/YOUR_USERNAME/stylesense-app.git
-cd stylesense-app
+For **database + auth in detail**, follow **[PostgreSQL and Auth.js setup](#postgresql-and-authjs-setup)** first, then continue here.
 
-# Install dependencies
-npm install
+1. **Open a terminal in the app folder** (the directory that contains this `README` and `package.json`):
 
-# Run the development server
-npm run dev
-```
+   ```bash
+   cd stylesense-app
+   ```
 
-Open [http://localhost:3000](http://localhost:3000) — marketing site at `/`, app at `/app`.
+2. **Install dependencies**
+
+   ```bash
+   npm install
+   ```
+
+3. **Create a PostgreSQL database** (local `createdb`, or Neon/Supabase dashboard) and note the connection string.
+
+4. **Environment files**
+
+   - Create **`.env`** with **`DATABASE_URL`** only (Prisma CLI reads `.env` by default; without it, `prisma db push` fails).
+   - Create **`.env.local`** with **`AUTH_SECRET`** (`openssl rand -base64 32`) and any optional keys below.
+
+   See **`.env.example`** for all variable names. Copy it and split into `.env` / `.env.local` as needed.
+
+5. **Create tables**
+
+   ```bash
+   npx prisma db push
+   ```
+
+   Or, if you use migrations: `npx prisma migrate dev --name init`.
+
+6. **Run the dev server**
+
+   ```bash
+   npm run dev
+   ```
+
+7. Open [http://localhost:3000](http://localhost:3000) (or the port shown if 3000 is busy) — marketing at `/`, register at `/register`, app at `/app` after sign-in.
+
+---
+
+## External APIs and services (complete list)
+
+Everything the app can talk to outside your machine. Only **PostgreSQL** and **Auth** secrets are strictly required for core login + CRUD.
+
+| # | Service | Used for | Key / configuration | Required? |
+|---|---------|----------|---------------------|-----------|
+| 1 | **PostgreSQL** | All app data (users, wardrobe, trips, …) | `DATABASE_URL` | **Yes** |
+| 2 | **Auth.js / NextAuth** | Sessions and JWT signing | `AUTH_SECRET` | **Yes** (prod) |
+| 3 | **Auth.js** | Correct callbacks in production | `AUTH_URL` (e.g. `https://yoursite.vercel.app`) | **Yes** on Vercel |
+| 4 | **[Open-Meteo](https://open-meteo.com/)** | **Current weather**, **multi-day forecast**, **city → coordinates**, **historical** memories, **reverse** geocode (EXIF) | *No API key* | Public API; falls back to **mock** data only if geocoding/network fails |
+| 5 | **[Vercel Blob](https://vercel.com/docs/storage/vercel-blob)** | Durable image URLs for wardrobe/uploads | `BLOB_READ_WRITE_TOKEN` | No — small images can fall back to **data URLs** (dev / limited) |
+| 6 | **[Google Gemini](https://ai.google.dev/)** | **Detect garment with AI** (vision → fields) | `GEMINI_API_KEY`, optional `GEMINI_GARMENT_MODEL` | No — feature disabled without AI key |
+| 7 | **[OpenAI](https://platform.openai.com/)** | Same garment feature **if Gemini is not configured** | `OPENAI_API_KEY`, optional `OPENAI_GARMENT_MODEL` | No |
+
+**Garment AI:** configure **either** `GEMINI_API_KEY` **or** `OPENAI_API_KEY` (or both — Gemini wins if both are set).
+
+**Weather:** no OpenWeather key — dashboard and planner use **Open-Meteo** only.
+
+---
+
+## Free tiers (optional APIs — good for development)
+
+Use these so you stay on free or low-cost plans while building. Limits change over time — check each provider’s pricing page.
+
+| Service | Free / low-cost option | Notes |
+|---------|------------------------|--------|
+| **PostgreSQL** | [Neon](https://neon.tech) free tier, or [Supabase](https://supabase.com) free tier | Serverless Postgres; copy **connection string** with `?sslmode=require` if shown. |
+| **Open-Meteo** | Always free (non-commercial friendly) | No key; **current + forecast + geocoding + historical** weather in this app. |
+| **Google Gemini** | [Google AI Studio](https://aistudio.google.com/apikey) | Free tier with **rate limits**; fine for testing garment detection. |
+| **OpenAI** | Not permanently free | Optional fallback for garment AI; prefer **Gemini** if you want $0. |
+| **Vercel Blob** | Included allowance on [Vercel Hobby](https://vercel.com/docs/storage/vercel-blob#pricing) | Optional; dev can skip and use small uploads / data URLs. |
+
+---
+
+## PostgreSQL and Auth.js setup
+
+StyleSense uses **Prisma** + **PostgreSQL** for data and **Auth.js (NextAuth v5)** for email/password sessions. You only need a connection string and a signing secret locally; production also needs **`AUTH_URL`**.
+
+### A. PostgreSQL (recommended: Neon free tier)
+
+1. Go to **[neon.tech](https://neon.tech)** → sign up → **Create project** (pick a region close to you).
+2. Open your project → **Dashboard** → find **Connection string** (URI format).
+3. It should look like:  
+   `postgresql://USER:PASSWORD@HOST.neon.tech/neondb?sslmode=require`  
+   Copy it exactly (include `sslmode=require` if Neon shows it).
+
+4. In **`stylesense-app/.env`** (create the file if needed), set:
+
+   ```env
+   DATABASE_URL="postgresql://...paste-here..."
+   ```
+
+5. From the **`stylesense-app`** folder, create tables:
+
+   ```bash
+   npm run db:push
+   ```
+
+   You should see Prisma sync the schema without errors.
+
+**Alternative — local Postgres:** install Postgres, run `createdb stylesense`, then use  
+`postgresql://YOUR_MAC_USERNAME@localhost:5432/stylesense` (adjust user/password if needed).
+
+### B. Auth.js — `AUTH_SECRET`
+
+Auth.js signs session tokens with **`AUTH_SECRET`**. Without it, auth is insecure or broken in production.
+
+1. In a terminal, generate a random secret:
+
+   ```bash
+   openssl rand -base64 32
+   ```
+
+2. In **`stylesense-app/.env.local`** (create if needed; never commit this file), add:
+
+   ```env
+   AUTH_SECRET="paste-the-output-from-step-1"
+   ```
+
+3. Restart **`npm run dev`** after changing env files.
+
+**Do not** reuse a secret from a tutorial or chat — generate your own.
+
+### C. Auth.js — `AUTH_URL` (production / Vercel only)
+
+For deployed apps, set the **canonical public URL** so cookies and redirects match your domain.
+
+1. After first Vercel deploy, copy your URL, e.g. `https://stylesense-xxx.vercel.app`.
+2. In Vercel → **Settings → Environment Variables**, add:
+
+   ```text
+   AUTH_URL = https://stylesense-xxx.vercel.app
+   ```
+
+   No trailing slash.
+
+3. Redeploy. For a **custom domain**, set `AUTH_URL` to `https://yourdomain.com` instead.
+
+Locally you can **omit** `AUTH_URL`; Next.js defaults to `http://localhost:3000` (or whatever port you use).
+
+### D. Quick verification
+
+1. `npm run dev` in **`stylesense-app`**.
+2. Open **`/register`**, create an account.
+3. Sign in at **`/login`**, then open **`/app`**.
+
+If registration fails, check the terminal for errors and confirm **`DATABASE_URL`** and **`AUTH_SECRET`** are loaded (and that **`npm run db:push`** succeeded).
 
 ---
 
@@ -65,108 +214,95 @@ Open [http://localhost:3000](http://localhost:3000) — marketing site at `/`, a
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start dev server (Turbopack) |
+| `npm run dev` | Start dev server |
 | `npm run build` | Production build |
 | `npm run start` | Run production server locally |
 | `npm run lint` | ESLint |
+| `npm run db:push` | Sync Prisma schema to DB (`db push`) |
+| `npm run db:migrate` | Create/apply migrations in development |
+| `npm run db:deploy` | Apply migrations in production (`migrate deploy`) |
+| `npm run db:studio` | Open Prisma Studio |
 
 ---
 
 ## Environment variables
 
-Create a `.env.local` file in the project root (never commit secrets):
+Never commit real secrets. See **`.env.example`**.
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `NEXT_PUBLIC_OPENWEATHER_API_KEY` | No | [OpenWeather](https://openweathermap.org/api) API key. If omitted, the app uses **mock weather** so everything still works. |
+| `DATABASE_URL` | **Yes** | PostgreSQL connection string. Put in **`.env`** so Prisma CLI picks it up. |
+| `AUTH_SECRET` | **Yes** (prod) | JWT/session signing (`openssl rand -base64 32`). Typically **`.env.local`**. |
+| `AUTH_URL` | **Yes** on Vercel | Canonical URL, e.g. `https://your-app.vercel.app` (no trailing slash). |
+| `BLOB_READ_WRITE_TOKEN` | No | [Vercel Blob](https://vercel.com/docs/storage/vercel-blob); data URL fallback for small images without it. |
+| `GEMINI_API_KEY` | No* | **Preferred** garment AI — [Google AI Studio](https://aistudio.google.com/apikey). |
+| `GEMINI_GARMENT_MODEL` | No | Default `gemini-2.0-flash`; try `gemini-1.5-flash` if needed. |
+| `OPENAI_API_KEY` | No* | Garment AI **only if** `GEMINI_API_KEY` is unset. |
+| `OPENAI_GARMENT_MODEL` | No | Default `gpt-4o-mini`. |
 
-Example:
-
-```env
-NEXT_PUBLIC_OPENWEATHER_API_KEY=your_key_here
-```
-
-For **Vercel**: Project → **Settings** → **Environment Variables** → add the same name/value for Production (and Preview if needed), then redeploy.
-
-> **Note:** Keys prefixed with `NEXT_PUBLIC_` are exposed to the browser. For production hardening, move weather requests to a [Route Handler](https://nextjs.org/docs/app/building-your-application/routing/route-handlers) and use a server-only secret.
+\*Garment detection needs **at least one** of `GEMINI_API_KEY` or `OPENAI_API_KEY`.
 
 ---
 
-## Project structure
+## Deployment (Vercel)
+
+1. Push the repo to GitHub.
+2. **Import** the repo in Vercel → framework **Next.js**.
+3. Set **Root Directory** to **`stylesense-app`** if the repository root is the parent `StyleSense` folder.
+4. Add **Environment Variables** for Production (and Preview if you use them): `DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL` (use your real `.vercel.app` or custom domain URL), then optional keys from the table above.
+5. **Deploy**, then sync the production database from your machine:
+
+   ```bash
+   DATABASE_URL="your-production-postgres-url" npx prisma db push
+   ```
+
+   Or `npx prisma migrate deploy` if you ship migration files.
+
+6. **Redeploy** after changing env vars.
+
+7. Optional: connect **Vercel Blob** in the project and add `BLOB_READ_WRITE_TOKEN`.
+
+---
+
+## Project structure (excerpt)
 
 ```
+prisma/
+  schema.prisma              # User, wardrobe, memories, trips, inspirations
 src/
-├── app/
-│   ├── page.tsx              # Marketing landing
-│   ├── layout.tsx            # Root layout & metadata
-│   ├── globals.css           # Design tokens & utilities
-│   └── app/                  # Authenticated-style app shell
-│       ├── layout.tsx        # Sidebar + header
-│       ├── page.tsx          # Dashboard
-│       ├── wardrobe/
-│       ├── memories/
-│       ├── planner/
-│       ├── style-match/
-│       ├── analytics/
-│       └── profile/
-├── components/
-│   ├── landing/              # Navbar, Hero, Features, etc.
-│   └── app/                  # Sidebar, AppHeader
-└── lib/
-    ├── types.ts              # Shared TypeScript types
-    ├── store.ts              # Zustand store
-    ├── data.ts               # Sample seed data
-    ├── utils.ts              # Outfit logic & helpers
-    └── weather.ts            # OpenWeather + mock fallback
+  app/
+    api/                     # REST: auth, me, wardrobe, memories, trips, weather, upload, analyze/garment
+    login/                   # Sign in
+    register/                # Sign up
+    app/                     # Protected app routes
+  auth.ts                    # NextAuth configuration
+  middleware.ts              # Protects /app/*
+  lib/
+    store.ts                 # Zustand + API sync
+    server-weather.ts        # Open-Meteo (forecast, geo, archive — server)
+    garment-vision.ts        # Gemini / OpenAI vision → garment fields
+    weather.ts               # Client fetch helpers → /api/weather/*
 ```
-
----
-
-## Deployment
-
-This app is a static-friendly Next.js build and deploys well on **[Vercel](https://vercel.com)**:
-
-1. Push this repo to GitHub.
-2. Import the repo in Vercel (framework: Next.js).
-3. Add environment variables if using real weather.
-4. Deploy — production URL will be assigned (e.g. `*.vercel.app`).
-
-You can also deploy with the Vercel CLI: `vercel` / `vercel --prod`.
 
 ---
 
 ## Design & product docs
 
-Higher-level specs and research (if kept alongside the repo in the monorepo):
-
-- `StyleSense_Design.md` — UI/UX theme and principles  
-- `StyleSense_MVP.md` — MVP scope and stack notes  
-- `deep-research-report (1).md` — roadmap, APIs, architecture ideas  
+- `deep-research-report (1).md` (parent folder) — roadmap, APIs, architecture ideas
 
 ---
 
-## Roadmap (ideas)
+## Roadmap (next)
 
-- User authentication and cloud sync  
-- Server-side API + database  
-- Real image upload and storage  
-- Historical weather for outfit memories  
-- Garment detection (ML / third-party API)  
-- React Native mobile app  
+- OAuth providers (Google, Apple)
+- React Native mobile app
+- Rate limiting and stricter upload policies
 
 ---
 
 ## License
 
 This project is private unless you add an explicit license. If you open-source it, replace this section with e.g. [MIT License](https://opensource.org/licenses/MIT).
-
----
-
-## Contributing
-
-1. Fork / branch from `main`  
-2. Make changes and run `npm run build`  
-3. Open a pull request with a short description  
 
 ---
 

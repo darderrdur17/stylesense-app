@@ -8,6 +8,7 @@ import {
   BarChart3,
   Camera,
   LayoutDashboard,
+  LogOut,
   Palette,
   Plane,
   Settings,
@@ -15,7 +16,9 @@ import {
   Sparkles,
   User,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { signOut } from "next-auth/react";
+import { useStore } from "@/lib/store";
+import { cn, initialsFromName } from "@/lib/utils";
 
 const navItems = [
   { href: "/app", label: "Dashboard", icon: LayoutDashboard },
@@ -43,6 +46,8 @@ type SidebarProps = {
 
 export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   const pathname = usePathname();
+  const user = useStore((s) => s.user);
+  const initials = initialsFromName(user.name || "?");
 
   useEffect(() => {
     if (mobileOpen) {
@@ -117,20 +122,32 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary ring-2 ring-primary/10"
           aria-hidden
         >
-          AM
+          {initials}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-text-primary">Alex Morgan</p>
-          <p className="truncate text-xs text-text-muted">Pro member</p>
+          <p className="truncate text-sm font-semibold text-text-primary">
+            {user.name || "Account"}
+          </p>
+          <p className="truncate text-xs text-text-muted">{user.email || "—"}</p>
         </div>
-        <Link
-          href="/app/profile"
-          onClick={() => onMobileClose()}
-          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-text-secondary transition-colors hover:bg-surface hover:text-primary"
-          aria-label="Settings"
-        >
-          <Settings className="h-5 w-5" strokeWidth={2} />
-        </Link>
+        <div className="flex shrink-0 items-center gap-1">
+          <Link
+            href="/app/profile"
+            onClick={() => onMobileClose()}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-text-secondary transition-colors hover:bg-surface hover:text-primary"
+            aria-label="Settings"
+          >
+            <Settings className="h-5 w-5" strokeWidth={2} />
+          </Link>
+          <button
+            type="button"
+            onClick={() => signOut({ callbackUrl: "/" })}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-text-secondary transition-colors hover:bg-surface hover:text-danger"
+            aria-label="Sign out"
+          >
+            <LogOut className="h-5 w-5" strokeWidth={2} />
+          </button>
+        </div>
       </div>
     </div>
   );

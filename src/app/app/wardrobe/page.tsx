@@ -4,14 +4,22 @@ import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Heart,
+  MapPin,
   Plus,
   Search,
   SlidersHorizontal,
+  Sparkles,
   Upload,
   X,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
-import type { ClothingCategory, ClothingItem, Season, StyleTag } from "@/lib/types";
+import type {
+  ClothingCategory,
+  ClothingItem,
+  GarmentDetectionSuggestion,
+  Season,
+  StyleTag,
+} from "@/lib/types";
 import { cn, getCategoryIcon } from "@/lib/utils";
 
 const CATEGORY_TABS: { id: "all" | ClothingCategory; label: string }[] = [
@@ -110,6 +118,15 @@ function ClothingCard({
             </span>
           ))}
         </div>
+        {item.photoPlaceLabel && (
+          <p className="mt-2 flex items-start gap-1 text-xs text-text-muted">
+            <MapPin className="mt-0.5 h-3 w-3 shrink-0" />
+            <span className="line-clamp-2">
+              {item.photoPlaceLabel}
+              {item.photoCapturedAt ? ` · ${item.photoCapturedAt}` : ""}
+            </span>
+          </p>
+        )}
         <p className="mt-auto text-xs text-text-muted">Worn {item.wearCount} times</p>
       </div>
     </motion.article>
@@ -125,10 +142,16 @@ const defaultForm = {
   styles: [] as StyleTag[],
   warmthLevel: 3,
   waterproof: false,
+  imageUrl: "/items/placeholder.jpg",
+  photoCapturedAt: "",
+  photoPlaceLabel: "",
+  photoLat: undefined as number | undefined,
+  photoLng: undefined as number | undefined,
 };
 
 export default function WardrobePage() {
   const [mounted, setMounted] = useState(false);
+  const hydrated = useStore((s) => s.hydrated);
   const wardrobe = useStore((s) => s.wardrobe);
   const addClothingItem = useStore((s) => s.addClothingItem);
   const toggleFavorite = useStore((s) => s.toggleFavorite);
@@ -138,6 +161,10 @@ export default function WardrobePage() {
   const [sort, setSort] = useState<SortKey>("newest");
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(defaultForm);
+  const [uploading, setUploading] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiProviderLabel, setAiProviderLabel] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -167,6 +194,8 @@ export default function WardrobePage() {
 
   const openModal = () => {
     setForm(defaultForm);
+    setAiError(null);
+    setAiProviderLabel(null);
     setModalOpen(true);
   };
 
@@ -188,27 +217,128 @@ export default function WardrobePage() {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const applyGarmentSuggestion = (s: GarmentDetectionSuggestion) => {
+    setForm((f) => ({
+      ...f,
+      name: s.name,
+      category: s.category,
+      color: s.color,
+      colorHex: s.colorHex,
+      warmthLevel: s.warmthLevel,
+      waterproof: s.waterproof,
+      seasons: s.season,
+      styles: s.style,
+    }));
+  };
+
+  const runGarmentDetection = async () => {
+    if (form.imageUrl === "/items/placeholder.jpg") return;
+    setAiLoading(true);
+    setAiError(null);
+    setAiProviderLabel(null);
+    try {
+      const res = await fetch("/api/analyze/garment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ imageUrl: form.imageUrl }),
+      });
+      const data = (await res.json()) as {
+        error?: string;
+        code?: string;
+        suggestion?: GarmentDetectionSuggestion;
+        provider?: "gemini" | "openai";
+      };
+      if (!res.ok || !data.suggestion) {
+        setAiError(data.error ?? "Could not analyze this image.");
+        return;
+      }
+      applyGarmentSuggestion(data.suggestion);
+      setAiProviderLabel(
+        data.provider === "gemini"
+          ? "Google Gemini"
+          : data.provider === "openai"
+            ? "OpenAI"
+            : null
+      );
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: fd,
+        credentials: "include",
+      });
+      if (!res.ok) return;
+      const data = (await res.json()) as {
+        url?: string;
+        exif?: {
+          dateIso?: string;
+          latitude?: number;
+          longitude?: number;
+          placeLabel?: string | null;
+        };
+      };
+      if (data.url) {
+        setForm((f) => ({
+          ...f,
+          imageUrl: data.url!,
+          ...(data.exif?.dateIso && {
+            photoCapturedAt: data.exif.dateIso.slice(0, 10),
+          }),
+          ...(data.exif?.latitude != null && data.exif?.longitude != null
+            ? { photoLat: data.exif.latitude, photoLng: data.exif.longitude }
+            : {}),
+          ...(data.exif?.placeLabel
+            ? { photoPlaceLabel: data.exif.placeLabel }
+            : {}),
+        }));
+      }
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim() || !form.color.trim()) return;
     if (form.seasons.length === 0 || form.styles.length === 0) return;
-    addClothingItem({
+    await addClothingItem({
       name: form.name.trim(),
       category: form.category,
       color: form.color.trim(),
       colorHex: form.colorHex,
       season: form.seasons,
       style: form.styles,
-      imageUrl: "/items/placeholder.jpg",
+      imageUrl: form.imageUrl,
       warmthLevel: form.warmthLevel,
       waterproof: form.waterproof,
       favorite: false,
+      ...(form.photoCapturedAt.trim() && {
+        photoCapturedAt: form.photoCapturedAt.trim(),
+      }),
+      ...(form.photoPlaceLabel.trim() && {
+        photoPlaceLabel: form.photoPlaceLabel.trim(),
+      }),
+      ...(form.photoLat != null && form.photoLng != null
+        ? { photoLat: form.photoLat, photoLng: form.photoLng }
+        : {}),
     });
     closeModal();
     setForm(defaultForm);
   };
 
-  if (!mounted) {
+  if (!mounted || !hydrated) {
     return <WardrobeSkeleton />;
   }
 
@@ -527,10 +657,91 @@ export default function WardrobePage() {
 
                 <div>
                   <p className="mb-2 text-sm font-medium text-text-secondary">Image</p>
-                  <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-surface-alt py-10 text-center">
+                  <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-surface-alt py-8 text-center transition hover:border-primary/40">
                     <Upload className="h-10 w-10 text-text-muted" />
-                    <p className="mt-2 text-sm text-text-secondary">Upload image</p>
-                    <p className="text-xs text-text-muted">Coming soon</p>
+                    <p className="mt-2 text-sm text-text-secondary">
+                      {uploading ? "Uploading…" : "Click to upload a photo"}
+                    </p>
+                    <p className="mt-1 text-xs text-text-muted">JPEG / PNG, up to 4MB</p>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      className="sr-only"
+                      onChange={handleFileChange}
+                      disabled={uploading}
+                    />
+                  </label>
+                  {form.imageUrl && form.imageUrl !== "/items/placeholder.jpg" && (
+                    <p className="mt-2 truncate text-xs text-text-muted" title={form.imageUrl}>
+                      Image attached
+                    </p>
+                  )}
+                  <div className="mt-4">
+                    <button
+                      type="button"
+                      disabled={
+                        uploading ||
+                        aiLoading ||
+                        form.imageUrl === "/items/placeholder.jpg"
+                      }
+                      onClick={() => void runGarmentDetection()}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-primary/40 bg-primary/10 px-4 py-2.5 text-sm font-semibold text-primary transition hover:bg-primary/15 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <Sparkles className="h-4 w-4 shrink-0" />
+                      {aiLoading ? "Analyzing photo…" : "Detect garment with AI"}
+                    </button>
+                    <p className="mt-2 text-center text-xs text-text-muted">
+                      Fills name, category, color, warmth, seasons &amp; styles from the photo. Set{" "}
+                      <span className="font-mono">GEMINI_API_KEY</span> (preferred) or{" "}
+                      <span className="font-mono">OPENAI_API_KEY</span> on the server.
+                    </p>
+                    {aiProviderLabel && (
+                      <p className="mt-2 text-center text-xs text-primary/90" role="status">
+                        Suggestions from {aiProviderLabel}
+                      </p>
+                    )}
+                    {aiError && (
+                      <p className="mt-2 text-center text-xs text-danger" role="alert">
+                        {aiError}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-3 rounded-xl border border-border/80 bg-surface-alt/50 p-4">
+                  <p className="text-sm font-medium text-text-secondary">Photo context (optional)</p>
+                  <p className="text-xs text-text-muted">
+                    Pre-filled from EXIF and reverse geocoding when your photo includes GPS. You can edit
+                    or enter manually.
+                  </p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-text-muted">
+                        Photo date
+                      </label>
+                      <input
+                        type="date"
+                        value={form.photoCapturedAt}
+                        onChange={(e) =>
+                          setForm((f) => ({ ...f, photoCapturedAt: e.target.value }))
+                        }
+                        className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-text-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="mb-1 block text-xs font-medium text-text-muted">
+                        Place / location label
+                      </label>
+                      <input
+                        type="text"
+                        value={form.photoPlaceLabel}
+                        onChange={(e) =>
+                          setForm((f) => ({ ...f, photoPlaceLabel: e.target.value }))
+                        }
+                        placeholder="e.g. Paris, France"
+                        className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
                   </div>
                 </div>
 

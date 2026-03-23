@@ -23,6 +23,7 @@ import {
   getWeatherEmoji,
   suggestOutfit,
 } from "@/lib/utils";
+import { getHistoricalWeather } from "@/lib/weather";
 
 const WEATHER_CONDITIONS: WeatherCondition[] = [
   "sunny",
@@ -112,6 +113,7 @@ function MemoriesSkeleton() {
 
 export default function MemoriesPage() {
   const [mounted, setMounted] = useState(false);
+  const hydrated = useStore((s) => s.hydrated);
   const memories = useStore((s) => s.memories);
   const removeMemory = useStore((s) => s.removeMemory);
   const addMemory = useStore((s) => s.addMemory);
@@ -133,6 +135,8 @@ export default function MemoriesPage() {
   const [formOccasion, setFormOccasion] = useState("");
   const [formMood, setFormMood] = useState<string>("happy");
   const [formNotes, setFormNotes] = useState("");
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyHint, setHistoryHint] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -180,7 +184,27 @@ export default function MemoriesPage() {
     setFormDate(new Date().toISOString().split("T")[0]);
   };
 
-  const handleSubmitMemory = (e: React.FormEvent) => {
+  const loadHistoricalWeather = async () => {
+    if (!formLocation.trim() || !formDate) {
+      setHistoryHint("Enter location and date first.");
+      return;
+    }
+    setHistoryLoading(true);
+    setHistoryHint(null);
+    try {
+      const w = await getHistoricalWeather(formLocation.trim(), formDate);
+      if (!w) {
+        setHistoryHint("No historical data found for that place.");
+        return;
+      }
+      setFormCondition(w.condition);
+      setFormTemp(String(Math.round(w.temp)));
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const handleSubmitMemory = async (e: React.FormEvent) => {
     e.preventDefault();
     const temp = Number.parseFloat(formTemp);
     if (Number.isNaN(temp) || !formLocation.trim() || !formOutfitName.trim() || !formDate) {
@@ -193,7 +217,7 @@ export default function MemoriesPage() {
       formOccasion.trim() || undefined,
       suggested
     );
-    addMemory({
+    await addMemory({
       outfit,
       location: formLocation.trim(),
       weather,
@@ -205,7 +229,7 @@ export default function MemoriesPage() {
     resetForm();
   };
 
-  if (!mounted) {
+  if (!mounted || !hydrated) {
     return <MemoriesSkeleton />;
   }
 
@@ -485,37 +509,53 @@ export default function MemoriesPage() {
                     className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium text-text-secondary">
-                      Weather
-                    </label>
-                    <select
-                      value={formCondition}
-                      onChange={(e) =>
-                        setFormCondition(e.target.value as WeatherCondition)
-                      }
-                      className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm text-text-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                <div>
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-sm font-medium text-text-secondary">Weather</span>
+                    <button
+                      type="button"
+                      onClick={() => void loadHistoricalWeather()}
+                      disabled={historyLoading}
+                      className="text-xs font-medium text-primary hover:underline disabled:opacity-50"
                     >
-                      {WEATHER_CONDITIONS.map((c) => (
-                        <option key={c} value={c}>
-                          {c.charAt(0).toUpperCase() + c.slice(1)}
-                        </option>
-                      ))}
-                    </select>
+                      {historyLoading ? "Loading…" : "Load historical weather"}
+                    </button>
                   </div>
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium text-text-secondary">
-                      Temp (°C)
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      step="0.5"
-                      value={formTemp}
-                      onChange={(e) => setFormTemp(e.target.value)}
-                      className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm text-text-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    />
+                  {historyHint && (
+                    <p className="mb-2 text-xs text-text-muted">{historyHint}</p>
+                  )}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-text-secondary">
+                        Condition
+                      </label>
+                      <select
+                        value={formCondition}
+                        onChange={(e) =>
+                          setFormCondition(e.target.value as WeatherCondition)
+                        }
+                        className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm text-text-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      >
+                        {WEATHER_CONDITIONS.map((c) => (
+                          <option key={c} value={c}>
+                            {c.charAt(0).toUpperCase() + c.slice(1)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-text-secondary">
+                        Temp (°C)
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        step="0.5"
+                        value={formTemp}
+                        onChange={(e) => setFormTemp(e.target.value)}
+                        className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm text-text-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
                   </div>
                 </div>
                 <div>

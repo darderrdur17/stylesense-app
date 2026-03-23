@@ -1,0 +1,108 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  passwordHash    String
+  name            String
+  avatar          String?
+  preferredStyles String[] @default([])
+  location        String   @default("New York")
+  temperatureUnit String   @default("celsius")
+  joinDate        DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  clothingItems   ClothingItem[]
+  memories        Memory[]
+  trips           Trip[]
+  inspirations    Inspiration[]
+  outfitFeedbacks OutfitFeedback[]
+}
+
+model ClothingItem {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  category    String
+  color       String
+  colorHex    String
+  seasons     String[]
+  styles      String[]
+  imageUrl    String
+  warmthLevel Int
+  waterproof  Boolean
+  dateAdded   DateTime
+  wearCount   Int      @default(0)
+  favorite    Boolean  @default(false)
+
+  /// From photo EXIF + optional reverse geocode (wardrobe / outfit photos)
+  photoCapturedAt   DateTime?
+  photoLat          Float?
+  photoLng          Float?
+  photoPlaceLabel   String?
+
+  @@index([userId])
+}
+
+model OutfitFeedback {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  liked     Boolean
+  itemIds   String[]
+  weather   Json
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Memory {
+  id       String   @id @default(cuid())
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  outfit   Json
+  photoUrl String?
+  location String
+  lat      Float?
+  lng      Float?
+  weather  Json
+  date     DateTime
+  mood     String?
+  notes    String?
+
+  @@index([userId])
+}
+
+model Trip {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  destination  String
+  startDate    DateTime
+  endDate      DateTime
+  dailyOutfits Json
+  packingList  String[]
+  status       String
+
+  @@index([userId])
+}
+
+model Inspiration {
+  id       String @id @default(cuid())
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name     String
+  imageUrl String
+  tags     String[]
+
+  @@index([userId])
+}

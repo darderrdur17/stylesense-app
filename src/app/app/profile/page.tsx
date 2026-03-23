@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { Bell, Moon, UserRound } from "lucide-react";
 import { useStore } from "@/lib/store";
 import type { StyleTag } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { cn, initialsFromName } from "@/lib/utils";
 
 const ALL_STYLE_TAGS: StyleTag[] = [
   "casual",
@@ -20,13 +20,6 @@ const ALL_STYLE_TAGS: StyleTag[] = [
   "elegant",
 ];
 
-function initialsFromName(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
-
 function ProfileSkeleton() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -39,6 +32,7 @@ function ProfileSkeleton() {
 
 export default function ProfilePage() {
   const [mounted, setMounted] = useState(false);
+  const hydrated = useStore((s) => s.hydrated);
   const user = useStore((s) => s.user);
   const wardrobe = useStore((s) => s.wardrobe);
   const setUser = useStore((s) => s.setUser);
@@ -98,8 +92,8 @@ export default function ProfilePage() {
     );
   };
 
-  const handleSave = () => {
-    setUser({
+  const handleSave = async () => {
+    await setUser({
       name,
       email,
       location,
@@ -108,7 +102,7 @@ export default function ProfilePage() {
     });
   };
 
-  if (!mounted) {
+  if (!mounted || !hydrated) {
     return (
       <div className="min-h-[60vh] bg-background">
         <ProfileSkeleton />

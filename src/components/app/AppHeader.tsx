@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { Bell, Menu, Search } from "lucide-react";
+import { useStore } from "@/lib/store";
+import { initialsFromName } from "@/lib/utils";
 
 type AppHeaderProps = {
   title: string;
@@ -10,6 +12,9 @@ type AppHeaderProps = {
 };
 
 export function AppHeader({ title, subtitle, onMenuToggle }: AppHeaderProps) {
+  const user = useStore((s) => s.user);
+  const initials = initialsFromName(user.name || "?");
+
   return (
     <header className="sticky top-0 z-30 border-b border-border/70 bg-surface/80 backdrop-blur-xl">
       <div className="flex min-h-[4rem] items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
@@ -61,7 +66,7 @@ export function AppHeader({ title, subtitle, onMenuToggle }: AppHeaderProps) {
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary ring-2 ring-primary/10 transition hover:bg-primary/20"
             aria-label="Account"
           >
-            AM
+            {initials}
           </Link>
         </div>
 
@@ -79,7 +84,7 @@ export function AppHeader({ title, subtitle, onMenuToggle }: AppHeaderProps) {
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary ring-2 ring-primary/10"
             aria-label="Account"
           >
-            AM
+            {initials}
           </Link>
         </div>
       </div>

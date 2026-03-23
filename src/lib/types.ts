@@ -44,6 +44,11 @@ export interface ClothingItem {
   dateAdded: string;
   wearCount: number;
   favorite: boolean;
+  /** From photo EXIF + reverse geocode when available */
+  photoCapturedAt?: string;
+  photoLat?: number;
+  photoLng?: number;
+  photoPlaceLabel?: string;
 }
 
 export interface Outfit {
@@ -114,6 +119,23 @@ export interface UserProfile {
   location: string;
   temperatureUnit: "celsius" | "fahrenheit";
   joinDate: string;
+}
+
+export interface FeedbackStats {
+  total: number;
+  thumbsUp: number;
+}
+
+/** Result of POST /api/analyze/garment (OpenAI vision). */
+export interface GarmentDetectionSuggestion {
+  name: string;
+  category: ClothingCategory;
+  color: string;
+  colorHex: string;
+  warmthLevel: number;
+  waterproof: boolean;
+  season: Season[];
+  style: StyleTag[];
 }
 
 export interface AnalyticsData {

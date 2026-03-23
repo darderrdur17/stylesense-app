@@ -10,6 +10,8 @@ import {
   Plane,
   RefreshCw,
   Shirt,
+  ThumbsDown,
+  ThumbsUp,
   Wind,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
@@ -83,15 +85,19 @@ function MemoryCard({ memory }: { memory: OutfitMemory }) {
 
 export default function AppDashboardPage() {
   const [mounted, setMounted] = useState(false);
+  const hydrated = useStore((s) => s.hydrated);
   const user = useStore((s) => s.user);
   const wardrobe = useStore((s) => s.wardrobe);
   const memories = useStore((s) => s.memories);
   const trips = useStore((s) => s.trips);
+  const submitOutfitFeedback = useStore((s) => s.submitOutfitFeedback);
 
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(true);
   const [weatherError, setWeatherError] = useState(false);
   const [outfitRefresh, setOutfitRefresh] = useState(0);
+  const [feedbackBusy, setFeedbackBusy] = useState(false);
+  const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -135,7 +141,26 @@ export default function AppDashboardPage() {
     [wardrobe]
   );
 
-  if (!mounted) {
+  const sendSuggestionFeedback = async (liked: boolean) => {
+    if (!weather || suggestedOutfit.length === 0) return;
+    setFeedbackBusy(true);
+    setFeedbackMsg(null);
+    const ok = await submitOutfitFeedback({
+      liked,
+      itemIds: suggestedOutfit.map((i) => i.id),
+      weather,
+    });
+    setFeedbackMsg(
+      ok
+        ? liked
+          ? "Thanks — we will prioritize similar picks."
+          : "Thanks — we will tune future suggestions."
+        : "Could not save feedback. Try again."
+    );
+    setFeedbackBusy(false);
+  };
+
+  if (!mounted || !hydrated) {
     return <DashboardSkeleton />;
   }
 
@@ -151,7 +176,9 @@ export default function AppDashboardPage() {
         >
           <h1 className="text-3xl font-bold tracking-tight text-text-primary md:text-4xl">
             {getGreeting()},{" "}
-            <span className="gradient-text">{user.name.split(" ")[0]}</span>
+            <span className="gradient-text">
+              {(user.name?.trim() && user.name.split(" ")[0]) || "there"}
+            </span>
           </h1>
           <p className="mt-2 text-text-secondary">Here is what is happening with your style today.</p>
         </motion.header>
@@ -259,6 +286,36 @@ export default function AppDashboardPage() {
                 <OutfitItemCard key={item.id} item={item} />
               ))}
             </div>
+          )}
+          {weather && suggestedOutfit.length > 0 && (
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-text-secondary">How does this suggestion look?</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  disabled={feedbackBusy}
+                  onClick={() => void sendSuggestionFeedback(true)}
+                  className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-text-primary shadow-sm transition hover:border-success/50 hover:bg-success/10 disabled:opacity-50"
+                >
+                  <ThumbsUp className="h-4 w-4 text-success" />
+                  Love it
+                </button>
+                <button
+                  type="button"
+                  disabled={feedbackBusy}
+                  onClick={() => void sendSuggestionFeedback(false)}
+                  className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-text-primary shadow-sm transition hover:border-danger/50 hover:bg-danger/10 disabled:opacity-50"
+                >
+                  <ThumbsDown className="h-4 w-4 text-danger" />
+                  Not quite
+                </button>
+              </div>
+            </div>
+          )}
+          {feedbackMsg && (
+            <p className="text-sm text-text-muted">
+              {feedbackMsg}
+            </p>
           )}
         </motion.section>
 

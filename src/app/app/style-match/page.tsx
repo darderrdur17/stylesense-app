@@ -128,8 +128,18 @@ function InspoCard({
   onToggle: () => void;
   index: number;
 }) {
-  const score = inspo.matchScore ?? 0;
-  const matched = resolveMatchedNames(inspo.matchedItems, wardrobe);
+  const score =
+    inspo.matchScore ??
+    (wardrobe.length
+      ? Math.max(0, ...wardrobe.map((w) => matchScore(w.style, inspo.tags)))
+      : 0);
+  const inferredIds =
+    inspo.matchedItems ??
+    wardrobe
+      .filter((w) => matchScore(w.style, inspo.tags) >= 35)
+      .map((w) => w.id)
+      .slice(0, 8);
+  const matched = resolveMatchedNames(inferredIds, wardrobe);
   const gradient = headerGradientForTags(inspo.tags);
 
   return (
@@ -218,6 +228,7 @@ function InspoCard({
 
 export default function StyleMatchPage() {
   const [mounted, setMounted] = useState(false);
+  const hydrated = useStore((s) => s.hydrated);
   const inspirations = useStore((s) => s.inspirations);
   const wardrobe = useStore((s) => s.wardrobe);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -249,7 +260,7 @@ export default function StyleMatchPage() {
     setVibeResults(scored);
   };
 
-  if (!mounted) {
+  if (!mounted || !hydrated) {
     return (
       <div className="min-h-[60vh] bg-background">
         <StyleMatchSkeleton />

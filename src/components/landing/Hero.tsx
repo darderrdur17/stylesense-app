@@ -53,7 +53,7 @@ export function Hero() {
           </motion.p>
           <motion.div variants={item} className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
             <Link
-              href="/app"
+              href="/register"
               className="gradient-bg inline-flex h-12 items-center justify-center rounded-full px-8 text-center text-sm font-semibold text-white shadow-xl shadow-primary/30 transition hover:opacity-95"
             >
               Start Styling

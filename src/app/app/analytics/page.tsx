@@ -68,7 +68,9 @@ function AnalyticsSkeleton() {
 
 export default function AnalyticsPage() {
   const [mounted, setMounted] = useState(false);
+  const hydrated = useStore((s) => s.hydrated);
   const wardrobe = useStore((s) => s.wardrobe);
+  const feedbackStats = useStore((s) => s.feedbackStats);
 
   useEffect(() => {
     setMounted(true);
@@ -167,7 +169,7 @@ export default function AnalyticsPage() {
     };
   }, [wardrobe]);
 
-  if (!mounted) {
+  if (!mounted || !hydrated) {
     return (
       <div className="min-h-[60vh] bg-background">
         <AnalyticsSkeleton />
@@ -228,6 +230,32 @@ export default function AnalyticsPage() {
             </p>
           </motion.div>
         ))}
+      </motion.section>
+
+      <motion.section
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, delay: 0.07 }}
+        className="grid grid-cols-2 gap-4 lg:grid-cols-2"
+      >
+        <div className="card-hover rounded-2xl border border-border bg-surface p-5 shadow-sm">
+          <p className="text-sm text-text-secondary">Dashboard suggestion feedback</p>
+          <p className="mt-2 text-2xl font-bold tabular-nums text-text-primary">
+            {feedbackStats.total}
+          </p>
+          <p className="mt-1 text-xs text-text-muted">Total responses (love it / not quite)</p>
+        </div>
+        <div className="card-hover rounded-2xl border border-border bg-surface p-5 shadow-sm">
+          <p className="text-sm text-text-secondary">Positive rate</p>
+          <p className="mt-2 text-2xl font-bold tabular-nums text-text-primary">
+            {feedbackStats.total === 0
+              ? "—"
+              : `${Math.round((feedbackStats.thumbsUp / feedbackStats.total) * 100)}%`}
+          </p>
+          <p className="mt-1 text-xs text-text-muted">
+            {feedbackStats.thumbsUp} love it of {feedbackStats.total}
+          </p>
+        </div>
       </motion.section>
 
       <motion.section
