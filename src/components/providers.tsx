@@ -3,6 +3,7 @@
 import type { Session } from "next-auth";
 import { SessionProvider } from "next-auth/react";
 import { DataBootstrap } from "./DataBootstrap";
+import { VisibilityRecovery } from "./VisibilityRecovery";
 
 export function Providers({
   children,
@@ -13,8 +14,13 @@ export function Providers({
   session: Session | null;
 }) {
   return (
-    <SessionProvider session={session}>
+    <SessionProvider
+      session={session}
+      refetchOnWindowFocus={false}
+      refetchWhenOffline={false}
+    >
       <DataBootstrap />
+      <VisibilityRecovery />
       {children}
     </SessionProvider>
   );
