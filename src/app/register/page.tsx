@@ -86,7 +86,7 @@ export default function RegisterPage() {
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-text-primary outline-none ring-primary/20 focus:border-primary focus:ring-2"
+              className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-base text-text-primary outline-none ring-primary/20 focus:border-primary focus:ring-2 sm:text-sm"
             />
           </div>
           <div>
@@ -100,7 +100,7 @@ export default function RegisterPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-text-primary outline-none ring-primary/20 focus:border-primary focus:ring-2"
+              className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-base text-text-primary outline-none ring-primary/20 focus:border-primary focus:ring-2 sm:text-sm"
             />
           </div>
           <div>
@@ -115,7 +115,7 @@ export default function RegisterPage() {
               minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-text-primary outline-none ring-primary/20 focus:border-primary focus:ring-2"
+              className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-base text-text-primary outline-none ring-primary/20 focus:border-primary focus:ring-2 sm:text-sm"
             />
             <p className="mt-1 text-xs text-text-muted">At least 8 characters.</p>
           </div>

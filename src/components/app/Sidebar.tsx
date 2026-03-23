@@ -116,7 +116,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   );
 
   const footer = (
-    <div className="border-t border-border/60 p-4">
+    <div className="border-t border-border/60 p-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))]">
       <div className="flex items-center gap-3 rounded-xl bg-surface-alt/80 px-3 py-3">
         <div
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary ring-2 ring-primary/10"

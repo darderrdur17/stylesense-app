@@ -50,6 +50,12 @@ body {
   font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Mobile: respect notch / home indicator; stable viewport height on iOS */
+  padding-left: env(safe-area-inset-left, 0);
+  padding-right: env(safe-area-inset-right, 0);
+  min-height: 100dvh;
+  min-height: 100vh;
+  touch-action: manipulation;
 }
 
 .gradient-text {

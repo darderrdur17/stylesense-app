@@ -16,7 +16,7 @@ export function AppHeader({ title, subtitle, onMenuToggle }: AppHeaderProps) {
   const initials = initialsFromName(name || "?");
 
   return (
-    <header className="sticky top-0 z-30 border-b border-border/70 bg-surface/80 backdrop-blur-xl">
+    <header className="sticky top-0 z-30 border-b border-border/70 bg-surface/80 pt-[env(safe-area-inset-top,0px)] backdrop-blur-xl">
       <div className="flex min-h-[4rem] items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <button

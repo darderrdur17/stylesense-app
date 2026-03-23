@@ -9,3 +9,5 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - **Setup, env split (`.env` vs `.env.local`), Vercel, and every external API** are documented in `README.md` and `.env.example`.
 - **Prisma:** `DATABASE_URL` belongs in `.env` so `npm run db:push` / CLI commands resolve the datasource.
 - **Demo user:** `npm run db:seed` after `db:push` — see `src/lib/demo-account.ts` and README § Demo account.
+- **Auth parity:** Demo and self-registered users share the same `User` model, `/api/me`, and credentials flow — no demo-only API paths.
+- **Mobile:** Root `viewport` + safe-area insets; auth inputs use `text-base` on small screens to avoid iOS zoom; sidebar uses `md:hidden` menu + bottom safe padding on account strip.
