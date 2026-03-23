@@ -6,6 +6,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { motion } from "framer-motion";
 import { Sparkles } from "lucide-react";
+import { DEMO_USER_EMAIL, DEMO_USER_PASSWORD } from "@/lib/demo-account";
+
+const showDemoLogin =
+  process.env.NODE_ENV === "development" ||
+  process.env.NEXT_PUBLIC_SHOW_DEMO_LOGIN === "true";
 
 function LoginForm() {
   const router = useRouter();
@@ -95,6 +100,23 @@ function LoginForm() {
         >
           {loading ? "Signing in…" : "Sign in"}
         </button>
+
+        {showDemoLogin && (
+          <div className="rounded-xl border border-border/80 bg-surface-alt/80 px-4 py-3">
+            <p className="text-xs font-medium text-text-secondary">Demo account</p>
+            <p className="mt-1 break-all font-mono text-xs text-text-muted">{DEMO_USER_EMAIL}</p>
+            <button
+              type="button"
+              onClick={() => {
+                setEmail(DEMO_USER_EMAIL);
+                setPassword(DEMO_USER_PASSWORD);
+              }}
+              className="mt-2 w-full rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-xs font-semibold text-primary transition hover:bg-primary/10"
+            >
+              Fill demo email &amp; password
+            </button>
+          </div>
+        )}
       </form>
 
       <p className="mt-6 text-center text-sm text-text-secondary">

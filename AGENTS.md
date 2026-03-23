@@ -8,3 +8,4 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 - **Setup, env split (`.env` vs `.env.local`), Vercel, and every external API** are documented in `README.md` and `.env.example`.
 - **Prisma:** `DATABASE_URL` belongs in `.env` so `npm run db:push` / CLI commands resolve the datasource.
+- **Demo user:** `npm run db:seed` after `db:push` — see `src/lib/demo-account.ts` and README § Demo account.

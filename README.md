@@ -90,6 +90,12 @@ For **database + auth in detail**, follow **[PostgreSQL and Auth.js setup](#post
 
    Or, if you use migrations: `npx prisma migrate dev --name init`.
 
+   Optional — **demo login** (see [Demo account](#e-demo-account-optional)):
+
+   ```bash
+   npm run db:seed
+   ```
+
 6. **Run the dev server**
 
    ```bash
@@ -208,6 +214,23 @@ Locally you can **omit** `AUTH_URL`; Next.js defaults to `http://localhost:3000`
 
 If registration fails, check the terminal for errors and confirm **`DATABASE_URL`** and **`AUTH_SECRET`** are loaded (and that **`npm run db:push`** succeeded).
 
+### E. Demo account (optional)
+
+After **`npm run db:push`**, create a test user (same credentials as **`src/lib/demo-account.ts`**):
+
+```bash
+npm run db:seed
+```
+
+- **Email:** `demo@stylesense.app`  
+- **Password:** `StyleSenseDemo!` (override with **`DEMO_SEED_PASSWORD`** when seeding if you want a different password)
+
+On **`/login`**, use **Fill demo email & password** (shown in **development** automatically, or set **`NEXT_PUBLIC_SHOW_DEMO_LOGIN=true`** on Vercel so testers see it).
+
+To **skip** seeding (e.g. CI): `SEED_DEMO_ACCOUNT=false npm run db:seed`.
+
+**Production:** A shared demo password is weak for public apps — remove the demo user, change the password, or turn off **`NEXT_PUBLIC_SHOW_DEMO_LOGIN`** when you go live.
+
 ---
 
 ## Scripts
@@ -222,6 +245,7 @@ If registration fails, check the terminal for errors and confirm **`DATABASE_URL
 | `npm run db:migrate` | Create/apply migrations in development |
 | `npm run db:deploy` | Apply migrations in production (`migrate deploy`) |
 | `npm run db:studio` | Open Prisma Studio |
+| `npm run db:seed` | Create/update demo user (`demo@stylesense.app`) + default inspirations |
 
 ---
 
@@ -239,6 +263,9 @@ Never commit real secrets. See **`.env.example`**.
 | `GEMINI_GARMENT_MODEL` | No | Default `gemini-2.0-flash`; try `gemini-1.5-flash` if needed. |
 | `OPENAI_API_KEY` | No* | Garment AI **only if** `GEMINI_API_KEY` is unset. |
 | `OPENAI_GARMENT_MODEL` | No | Default `gpt-4o-mini`. |
+| `NEXT_PUBLIC_SHOW_DEMO_LOGIN` | No | `true` = show demo “Fill email & password” on `/login` (prod). Dev shows it automatically. |
+| `DEMO_SEED_PASSWORD` | No | Used only by **`npm run db:seed`** to set demo user password (default in code). |
+| `SEED_DEMO_ACCOUNT` | No | `false` = **`db:seed`** skips creating the demo user. |
 
 \*Garment detection needs **at least one** of `GEMINI_API_KEY` or `OPENAI_API_KEY`.
 
@@ -254,6 +281,7 @@ Never commit real secrets. See **`.env.example`**.
 
    ```bash
    DATABASE_URL="your-production-postgres-url" npx prisma db push
+   DATABASE_URL="your-production-postgres-url" npm run db:seed
    ```
 
    Or `npx prisma migrate deploy` if you ship migration files.
@@ -269,6 +297,7 @@ Never commit real secrets. See **`.env.example`**.
 ```
 prisma/
   schema.prisma              # User, wardrobe, memories, trips, inspirations
+  seed.ts                    # Demo user (`npm run db:seed`)
 src/
   app/
     api/                     # REST: auth, me, wardrobe, memories, trips, weather, upload, analyze/garment
