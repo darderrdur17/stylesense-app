@@ -25,26 +25,44 @@ export default function RegisterPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: name.trim(), email: email.trim(), password }),
       });
-      const data = (await res.json()) as { error?: string };
-      if (!res.ok) {
-        setError(data.error || "Registration failed.");
-        setLoading(false);
+      const raw = await res.text();
+      let data = {} as { error?: string };
+      try {
+        data = raw ? (JSON.parse(raw) as { error?: string }) : {};
+      } catch {
+        setError(
+          `Registration failed (HTTP ${res.status}). The server did not return JSON — often a crash or proxy error. Open Vercel → Deployments → your deployment → Functions / Logs and confirm DATABASE_URL / DIRECT_URL work.`
+        );
         return;
       }
-      const sign = await signIn("credentials", {
-        email: email.trim(),
-        password,
-        redirect: false,
-      });
+      if (!res.ok) {
+        setError(data.error || `Registration failed (${res.status}).`);
+        return;
+      }
+      let sign: Awaited<ReturnType<typeof signIn>>;
+      try {
+        sign = await signIn("credentials", {
+          email: email.trim(),
+          password,
+          redirect: false,
+        });
+      } catch {
+        setError(
+          "Account may have been created. Try signing in manually. If sign-in also fails, check AUTH_URL and AUTH_SECRET on Vercel match this site."
+        );
+        return;
+      }
       if (sign?.error) {
         setError("Account created but sign-in failed. Try logging in.");
-        setLoading(false);
         return;
       }
       router.push("/app");
       router.refresh();
-    } catch {
-      setError("Something went wrong. Try again.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      setError(
+        `Network or browser error: ${msg}. Check your connection, disable extensions that block requests, and try again.`
+      );
     } finally {
       setLoading(false);
     }
