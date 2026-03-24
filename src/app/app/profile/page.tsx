@@ -51,6 +51,7 @@ export default function ProfilePage() {
   const [profileLng, setProfileLng] = useState<number | null>(null);
   const [geoBusy, setGeoBusy] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -81,9 +82,10 @@ export default function ProfilePage() {
 
   const clearSavedCoords = async () => {
     setGeoError(null);
-    setProfileLat(null);
-    setProfileLng(null);
-    await setUser({ latitude: null, longitude: null });
+    const ok = await setUser({ latitude: null, longitude: null });
+    if (!ok) {
+      setGeoError("Could not clear saved coordinates. Try again.");
+    }
   };
 
   const summary = useMemo(() => {
@@ -119,7 +121,8 @@ export default function ProfilePage() {
   };
 
   const handleSave = async () => {
-    await setUser({
+    setSaveError(null);
+    const ok = await setUser({
       name,
       email,
       location,
@@ -128,6 +131,9 @@ export default function ProfilePage() {
       latitude: profileLat,
       longitude: profileLng,
     });
+    if (!ok) {
+      setSaveError("Could not save profile. Check your connection and try again.");
+    }
   };
 
   if (!mounted || !hydrated) {
@@ -386,11 +392,16 @@ export default function ProfilePage() {
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, delay: 0.14 }}
-        className="flex justify-end"
+        className="flex flex-col items-end gap-2"
       >
+        {saveError && (
+          <p className="max-w-md text-right text-sm text-danger" role="alert">
+            {saveError}
+          </p>
+        )}
         <button
           type="button"
-          onClick={handleSave}
+          onClick={() => void handleSave()}
           className="gradient-bg rounded-xl px-8 py-3 text-sm font-semibold text-white shadow-md transition hover:opacity-95"
         >
           Save Changes

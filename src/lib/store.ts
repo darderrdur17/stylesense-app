@@ -53,7 +53,8 @@ interface AppState {
   reset: () => void;
   bootstrap: () => Promise<void>;
 
-  setUser: (user: Partial<UserProfile>) => Promise<void>;
+  /** Returns true if the server accepted the update and the store was refreshed. */
+  setUser: (user: Partial<UserProfile>) => Promise<boolean>;
   setOnboarded: (v: boolean) => void;
 
   addClothingItem: (
@@ -158,9 +159,18 @@ export const useStore = create<AppState>()(
           credentials: "include",
           body: JSON.stringify(payload),
         });
-        if (!res.ok) return;
+        if (!res.ok) {
+          try {
+            const err = (await res.json()) as { error?: string };
+            console.error("Profile update failed:", res.status, err?.error ?? res.statusText);
+          } catch {
+            console.error("Profile update failed:", res.status);
+          }
+          return false;
+        }
         const data = (await res.json()) as { user: UserProfile };
         set({ user: data.user });
+        return true;
       },
 
       addClothingItem: async (item) => {

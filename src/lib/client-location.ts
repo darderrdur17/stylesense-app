@@ -1,6 +1,6 @@
 import type { UserProfile } from "./types";
 
-type SetUserFn = (updates: Partial<UserProfile>) => Promise<void>;
+type SetUserFn = (updates: Partial<UserProfile>) => Promise<boolean>;
 
 /**
  * Browser geolocation + reverse geocode, then PATCH profile (saved to Postgres via /api/profile).
@@ -29,17 +29,35 @@ export async function requestGeolocationAndSaveProfile(
           /* keep fallback */
         }
         if (!locationLabel) locationLabel = "Near you";
-        await setUser({
+        const saved = await setUser({
           latitude: lat,
           longitude: lng,
           location: locationLabel,
         });
+        if (!saved) {
+          resolve({
+            ok: false,
+            error:
+              "Could not save your location to your profile. Check that you are signed in and try again.",
+          });
+          return;
+        }
         resolve({ ok: true });
       },
       (err) => {
+        const code = (err as GeolocationPositionError)?.code;
+        let message = err.message || "Could not get your location.";
+        if (code === 1) {
+          message =
+            "Location permission was denied. Enable it in your browser settings for this site, then try again.";
+        } else if (code === 2) {
+          message = "Your position could not be determined. Try again or set your city in Profile.";
+        } else if (code === 3) {
+          message = "Location request timed out. Try again.";
+        }
         resolve({
           ok: false,
-          error: err.message || "Could not get your location.",
+          error: message,
         });
       },
       { enableHighAccuracy: false, timeout: 15_000, maximumAge: 60_000 }

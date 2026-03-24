@@ -20,14 +20,18 @@ function ymd(d: Date): string {
 }
 
 export function userToProfile(u: User): UserProfile {
+  const lat =
+    u.latitude != null && Number.isFinite(Number(u.latitude)) ? Number(u.latitude) : null;
+  const lng =
+    u.longitude != null && Number.isFinite(Number(u.longitude)) ? Number(u.longitude) : null;
   return {
     name: u.name,
     email: u.email,
     avatar: u.avatar ?? "",
     preferredStyles: (u.preferredStyles ?? []) as UserProfile["preferredStyles"],
     location: u.location,
-    ...(u.latitude != null && { latitude: u.latitude }),
-    ...(u.longitude != null && { longitude: u.longitude }),
+    ...(lat != null && { latitude: lat }),
+    ...(lng != null && { longitude: lng }),
     temperatureUnit: u.temperatureUnit as UserProfile["temperatureUnit"],
     joinDate: ymd(u.joinDate),
   };
