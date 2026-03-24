@@ -21,6 +21,8 @@ export const viewport: Viewport = {
   maximumScale: 5,
   themeColor: "#F8F9FC",
   viewportFit: "cover",
+  /** Better behavior when the mobile keyboard opens (viewport resizes with form content). */
+  interactiveWidget: "resizes-content",
 };
 
 export const metadata: Metadata = {
@@ -50,9 +52,9 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full overflow-x-clip antialiased`}
     >
-      <body className="flex min-h-full flex-col">
+      <body className="flex min-h-full min-h-[100dvh] flex-col">
         <Providers session={session}>{children}</Providers>
       </body>
     </html>

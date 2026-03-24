@@ -94,7 +94,7 @@ function ClothingCard({
           <button
             type="button"
             onClick={() => onToggleFavorite(item.id)}
-            className="shrink-0 rounded-full p-1.5 text-text-muted transition hover:bg-surface-alt hover:text-danger"
+            className="inline-flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full p-1.5 text-text-muted transition hover:bg-surface-alt hover:text-danger"
             aria-label={item.favorite ? "Remove from favorites" : "Add to favorites"}
           >
             <Heart
@@ -404,7 +404,7 @@ export default function WardrobePage() {
           transition={{ delay: 0.05 }}
           className="space-y-4"
         >
-          <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex touch-pan-x gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {CATEGORY_TABS.map((tab) => (
               <button
                 key={tab.id}
@@ -430,7 +430,7 @@ export default function WardrobePage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by name..."
-                className="w-full rounded-xl border border-border bg-surface py-2.5 pl-10 pr-4 text-sm text-text-primary placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-xl border border-border bg-surface py-2.5 pl-10 pr-4 text-base text-text-primary placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:text-sm"
               />
             </div>
             <div className="relative sm:w-48">
@@ -438,7 +438,7 @@ export default function WardrobePage() {
               <select
                 value={sort}
                 onChange={(e) => setSort(e.target.value as SortKey)}
-                className="w-full appearance-none rounded-xl border border-border bg-surface py-2.5 pl-10 pr-10 text-sm text-text-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full appearance-none rounded-xl border border-border bg-surface py-2.5 pl-10 pr-10 text-base text-text-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:text-sm"
               >
                 <option value="newest">Newest</option>
                 <option value="mostWorn">Most worn</option>
@@ -512,7 +512,7 @@ export default function WardrobePage() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 12 }}
               transition={{ type: "spring", damping: 26, stiffness: 320 }}
-              className="relative z-10 max-h-[min(90vh,800px)] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-surface p-6 shadow-2xl"
+              className="relative z-10 max-h-[min(90dvh,800px)] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-surface p-5 shadow-2xl sm:p-6"
             >
               <div className="mb-6 flex items-center justify-between gap-4">
                 <h2 className="text-xl font-semibold text-text-primary">Add clothing item</h2>
@@ -535,7 +535,7 @@ export default function WardrobePage() {
                     required
                     value={form.name}
                     onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                    className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-text-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-base text-text-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:text-sm"
                   />
                 </div>
 
@@ -548,7 +548,7 @@ export default function WardrobePage() {
                     onChange={(e) =>
                       setForm((f) => ({ ...f, category: e.target.value as ClothingCategory }))
                     }
-                    className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-text-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-base text-text-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:text-sm"
                   >
                     {CATEGORY_TABS.filter((t) => t.id !== "all").map((t) => (
                       <option key={t.id} value={t.id}>
@@ -567,7 +567,7 @@ export default function WardrobePage() {
                       required
                       value={form.color}
                       onChange={(e) => setForm((f) => ({ ...f, color: e.target.value }))}
-                      className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-text-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-base text-text-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:text-sm"
                     />
                   </div>
                   <div>
@@ -754,7 +754,7 @@ export default function WardrobePage() {
                         onChange={(e) =>
                           setForm((f) => ({ ...f, photoCapturedAt: e.target.value }))
                         }
-                        className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-text-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        className="w-full rounded-xl border border-border bg-background px-3 py-2 text-base text-text-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:text-sm"
                       />
                     </div>
                     <div className="sm:col-span-2">
@@ -768,7 +768,7 @@ export default function WardrobePage() {
                           setForm((f) => ({ ...f, photoPlaceLabel: e.target.value }))
                         }
                         placeholder="e.g. Paris, France"
-                        className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        className="w-full rounded-xl border border-border bg-background px-3 py-2 text-base text-text-primary placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:text-sm"
                       />
                     </div>
                   </div>

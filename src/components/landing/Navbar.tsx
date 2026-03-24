@@ -39,7 +39,7 @@ export function Navbar() {
         scrolled ? "glass shadow-sm border-b border-border/40" : "bg-transparent"
       }`}
     >
-      <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+      <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 pt-[max(1rem,env(safe-area-inset-top))] sm:px-6 lg:px-8">
         <Link href="/" className="flex items-center gap-2 text-text-primary">
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
             <Sparkles className="h-5 w-5" strokeWidth={2} aria-hidden />
@@ -73,7 +73,7 @@ export function Navbar() {
 
         <button
           type="button"
-          className="inline-flex items-center justify-center rounded-lg p-2 text-text-primary md:hidden"
+          className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg p-2 text-text-primary md:hidden"
           onClick={() => setOpen(true)}
           aria-expanded={open}
           aria-label="Open menu"
@@ -96,13 +96,13 @@ export function Navbar() {
               aria-label="Close menu overlay"
             />
             <motion.aside
-              className="fixed inset-y-0 right-0 z-50 flex w-[min(100%,20rem)] flex-col glass border-l border-border/50 shadow-2xl md:hidden"
+              className="fixed inset-y-0 right-0 z-50 flex max-h-[100dvh] w-[min(100%,20rem)] flex-col glass border-l border-border/50 shadow-2xl md:hidden"
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 28, stiffness: 320 }}
             >
-              <div className="flex items-center justify-between border-b border-border/50 px-4 py-4">
+              <div className="flex items-center justify-between border-b border-border/50 px-4 py-4 pt-[max(1rem,env(safe-area-inset-top))]">
                 <span className="text-sm font-semibold text-text-primary">Menu</span>
                 <button
                   type="button"
@@ -125,7 +125,7 @@ export function Navbar() {
                   </a>
                 ))}
               </div>
-              <div className="flex flex-col gap-2 border-t border-border/50 p-4">
+              <div className="flex flex-col gap-2 border-t border-border/50 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
                 <Link
                   href="/login"
                   className="flex w-full items-center justify-center rounded-full border border-border py-3 text-sm font-semibold text-text-primary transition hover:bg-surface-alt"

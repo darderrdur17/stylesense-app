@@ -100,9 +100,12 @@ body {
 .card-hover {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.card-hover:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 20px 40px rgba(108, 99, 255, 0.15);
+/* Avoid sticky hover lift on touch devices (prevents “stuck” pressed look). */
+@media (hover: hover) and (pointer: fine) {
+  .card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px rgba(108, 99, 255, 0.15);
+  }
 }
 
 .animate-float {

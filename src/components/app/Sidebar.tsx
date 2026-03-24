@@ -157,7 +157,12 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
 
   return (
     <>
-      <aside className={cn(shellClass, "fixed inset-y-0 left-0 z-40 hidden md:flex")}>
+      <aside
+        className={cn(
+          shellClass,
+          "fixed inset-y-0 left-0 z-40 hidden pt-[env(safe-area-inset-top)] md:flex"
+        )}
+      >
         {brand}
         {nav}
         {footer}
@@ -179,7 +184,11 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
             />
             <motion.aside
               key="sidebar-drawer"
-              className={cn(shellClass, "fixed inset-y-0 left-0 z-50 flex md:hidden")}
+              className={cn(
+                shellClass,
+                "fixed inset-y-0 left-0 z-50 flex max-h-[100dvh] md:hidden",
+                "pt-[env(safe-area-inset-top)]"
+              )}
               initial={{ x: -24, opacity: 0.98 }}
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: -280, opacity: 0.98 }}

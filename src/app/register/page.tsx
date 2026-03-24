@@ -51,12 +51,12 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 py-12">
+    <div className="flex min-h-[100dvh] min-h-screen flex-col items-center justify-center bg-background px-4 py-10 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))] sm:py-12">
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="mx-auto w-full max-w-md rounded-2xl border border-border bg-surface p-8 shadow-xl"
+        className="mx-auto w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-xl sm:p-8"
       >
         <div className="mb-8 text-center">
           <Link href="/" className="inline-flex items-center justify-center gap-2 text-text-primary">

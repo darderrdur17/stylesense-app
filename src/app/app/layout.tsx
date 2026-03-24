@@ -58,18 +58,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const header = useMemo(() => headerForPath(pathname), [pathname]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-[100dvh] min-h-screen bg-background">
       <Sidebar
         mobileOpen={mobileSidebarOpen}
         onMobileClose={() => setMobileSidebarOpen(false)}
       />
-      <div className="min-h-screen md:ml-[280px]">
+      <div className="min-h-[100dvh] min-h-screen md:ml-[280px]">
         <AppHeader
           title={header.title}
           subtitle={header.subtitle}
           onMenuToggle={() => setMobileSidebarOpen((open) => !open)}
         />
-        <main className="px-4 py-6 sm:px-6 lg:px-8">{children}</main>
+        <main className="px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-6 lg:px-8">
+          {children}
+        </main>
       </div>
     </div>
   );

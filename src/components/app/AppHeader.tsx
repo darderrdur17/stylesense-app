@@ -21,7 +21,7 @@ export function AppHeader({ title, subtitle, onMenuToggle }: AppHeaderProps) {
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <button
             type="button"
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border/80 bg-surface text-text-primary shadow-sm transition hover:bg-surface-alt md:hidden"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border/80 bg-surface text-text-primary shadow-sm transition hover:bg-surface-alt md:hidden"
             onClick={onMenuToggle}
             aria-label="Open menu"
           >
@@ -32,7 +32,7 @@ export function AppHeader({ title, subtitle, onMenuToggle }: AppHeaderProps) {
               {title}
             </h1>
             {subtitle ? (
-              <p className="mt-0.5 hidden truncate text-sm text-text-secondary sm:block">
+              <p className="mt-0.5 truncate text-xs leading-snug text-text-secondary sm:text-sm">
                 {subtitle}
               </p>
             ) : null}
@@ -50,7 +50,7 @@ export function AppHeader({ title, subtitle, onMenuToggle }: AppHeaderProps) {
             <input
               type="search"
               placeholder="Search clothes, outfits..."
-              className="w-full rounded-xl border border-border/80 bg-surface-alt/80 py-2.5 pl-10 pr-3 text-sm text-text-primary placeholder:text-text-muted outline-none ring-primary/20 transition focus:border-primary/40 focus:bg-surface focus:ring-2"
+              className="w-full rounded-xl border border-border/80 bg-surface-alt/80 py-2.5 pl-10 pr-3 text-base text-text-primary placeholder:text-text-muted outline-none ring-primary/20 transition focus:border-primary/40 focus:bg-surface focus:ring-2 sm:text-sm"
             />
           </label>
           <button
@@ -100,7 +100,7 @@ export function AppHeader({ title, subtitle, onMenuToggle }: AppHeaderProps) {
           <input
             type="search"
             placeholder="Search clothes, outfits..."
-            className="w-full rounded-xl border border-border/80 bg-surface-alt/80 py-2.5 pl-10 pr-3 text-sm text-text-primary placeholder:text-text-muted outline-none ring-primary/20 transition focus:border-primary/40 focus:bg-surface focus:ring-2"
+            className="w-full rounded-xl border border-border/80 bg-surface-alt/80 py-2.5 pl-10 pr-3 text-base text-text-primary placeholder:text-text-muted outline-none ring-primary/20 transition focus:border-primary/40 focus:bg-surface focus:ring-2 sm:text-sm"
           />
         </label>
       </div>
