@@ -82,9 +82,9 @@ export default function ProfilePage() {
 
   const clearSavedCoords = async () => {
     setGeoError(null);
-    const ok = await setUser({ latitude: null, longitude: null });
-    if (!ok) {
-      setGeoError("Could not clear saved coordinates. Try again.");
+    const cleared = await setUser({ latitude: null, longitude: null });
+    if (!cleared.ok) {
+      setGeoError(cleared.error);
     }
   };
 
@@ -122,7 +122,7 @@ export default function ProfilePage() {
 
   const handleSave = async () => {
     setSaveError(null);
-    const ok = await setUser({
+    const saved = await setUser({
       name,
       email,
       location,
@@ -131,8 +131,8 @@ export default function ProfilePage() {
       latitude: profileLat,
       longitude: profileLng,
     });
-    if (!ok) {
-      setSaveError("Could not save profile. Check your connection and try again.");
+    if (!saved.ok) {
+      setSaveError(saved.error);
     }
   };
 

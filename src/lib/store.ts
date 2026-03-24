@@ -7,8 +7,9 @@ import {
   FeedbackStats,
   OutfitMemory,
   TripPlan,
-  UserProfile,
+  SetUserResult,
   StyleInspo,
+  UserProfile,
   WeatherData,
 } from "./types";
 const emptyUser: UserProfile = {
@@ -53,8 +54,7 @@ interface AppState {
   reset: () => void;
   bootstrap: () => Promise<void>;
 
-  /** Returns true if the server accepted the update and the store was refreshed. */
-  setUser: (user: Partial<UserProfile>) => Promise<boolean>;
+  setUser: (user: Partial<UserProfile>) => Promise<SetUserResult>;
   setOnboarded: (v: boolean) => void;
 
   addClothingItem: (
@@ -160,17 +160,31 @@ export const useStore = create<AppState>()(
           body: JSON.stringify(payload),
         });
         if (!res.ok) {
+          let message = `Could not save profile (${res.status}).`;
           try {
             const err = (await res.json()) as { error?: string };
-            console.error("Profile update failed:", res.status, err?.error ?? res.statusText);
+            if (typeof err.error === "string" && err.error.trim()) {
+              message = err.error.trim();
+            } else if (res.status === 401) {
+              message =
+                "Not signed in or session expired. Sign out and sign in again. On Vercel, set AUTH_URL to this exact site URL (no trailing slash) and redeploy.";
+            } else if (res.status === 400) {
+              message = "Invalid profile data. Check your inputs and try again.";
+            } else if (res.status >= 500) {
+              message = "Server error while saving. Try again in a moment.";
+            }
           } catch {
-            console.error("Profile update failed:", res.status);
+            if (res.status === 401) {
+              message =
+                "Session not accepted by the server. Sign out, sign in again, and verify AUTH_URL on Vercel matches this domain.";
+            }
           }
-          return false;
+          console.error("Profile update failed:", res.status, message);
+          return { ok: false, error: message };
         }
         const data = (await res.json()) as { user: UserProfile };
         set({ user: data.user });
-        return true;
+        return { ok: true };
       },
 
       addClothingItem: async (item) => {

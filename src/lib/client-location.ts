@@ -1,6 +1,6 @@
-import type { UserProfile } from "./types";
+import type { SetUserResult, UserProfile } from "./types";
 
-type SetUserFn = (updates: Partial<UserProfile>) => Promise<boolean>;
+type SetUserFn = (updates: Partial<UserProfile>) => Promise<SetUserResult>;
 
 /**
  * Browser geolocation + reverse geocode, then PATCH profile (saved to Postgres via /api/profile).
@@ -34,12 +34,8 @@ export async function requestGeolocationAndSaveProfile(
           longitude: lng,
           location: locationLabel,
         });
-        if (!saved) {
-          resolve({
-            ok: false,
-            error:
-              "Could not save your location to your profile. Check that you are signed in and try again.",
-          });
+        if (!saved.ok) {
+          resolve({ ok: false, error: saved.error });
           return;
         }
         resolve({ ok: true });

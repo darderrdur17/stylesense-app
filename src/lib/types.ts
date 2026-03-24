@@ -124,6 +124,11 @@ export interface UserProfile {
   joinDate: string;
 }
 
+/** Result of PATCH /api/profile via `useStore().setUser`. */
+export type SetUserResult =
+  | { ok: true }
+  | { ok: false; error: string };
+
 export interface FeedbackStats {
   total: number;
   thumbsUp: number;
