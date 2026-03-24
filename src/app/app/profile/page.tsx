@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { motion } from "framer-motion";
 import { Bell, Moon, Navigation, UserRound } from "lucide-react";
+import { requestGeolocationAndSaveProfile } from "@/lib/client-location";
 import { useStore } from "@/lib/store";
 import type { StyleTag } from "@/lib/types";
 import { cn, initialsFromName } from "@/lib/utils";
@@ -66,44 +67,23 @@ export default function ProfilePage() {
     setProfileLng(user.longitude ?? null);
   }, [mounted, user]);
 
-  const handleUseCurrentLocation = () => {
+  const handleUseCurrentLocation = async () => {
     setGeoError(null);
-    if (!navigator.geolocation) {
-      setGeoError("Location is not supported in this browser.");
-      return;
-    }
     setGeoBusy(true);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        setProfileLat(lat);
-        setProfileLng(lng);
-        try {
-          const r = await fetch(
-            `/api/geocode/reverse?lat=${encodeURIComponent(String(lat))}&lng=${encodeURIComponent(String(lng))}`,
-            { credentials: "include" }
-          );
-          const data = (await r.json()) as { label?: string };
-          if (r.ok && data.label) setLocation(data.label);
-        } catch {
-          /* keep existing location text */
-        } finally {
-          setGeoBusy(false);
-        }
-      },
-      (err) => {
-        setGeoError(err.message || "Could not get your location.");
-        setGeoBusy(false);
-      },
-      { enableHighAccuracy: false, timeout: 15000, maximumAge: 60_000 }
-    );
+    const result = await requestGeolocationAndSaveProfile(setUser, {
+      fallbackLocationLabel: location,
+    });
+    setGeoBusy(false);
+    if (!result.ok) {
+      setGeoError(result.error ?? "Could not get your location.");
+    }
   };
 
-  const clearSavedCoords = () => {
+  const clearSavedCoords = async () => {
+    setGeoError(null);
     setProfileLat(null);
     setProfileLng(null);
-    setGeoError(null);
+    await setUser({ latitude: null, longitude: null });
   };
 
   const summary = useMemo(() => {
@@ -231,12 +211,17 @@ export default function ProfilePage() {
               className="mt-1.5 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-text-primary outline-none ring-primary/20 transition focus:border-primary focus:ring-2"
             />
           </div>
-          <div>
+          <div className="rounded-xl border border-border bg-surface-alt/40 p-4">
+            <h3 className="text-sm font-semibold text-text-primary">Location for weather</h3>
+            <p className="mt-1 text-xs text-text-secondary">
+              Enable location access for accurate local forecasts. Your coordinates are saved to your
+              profile only.
+            </p>
             <label
               htmlFor="profile-location"
-              className="text-sm font-medium text-text-secondary"
+              className="mt-4 block text-sm font-medium text-text-secondary"
             >
-              Location
+              City or area (display)
             </label>
             <input
               id="profile-location"
@@ -258,7 +243,7 @@ export default function ProfilePage() {
               {(profileLat != null || profileLng != null) && (
                 <button
                   type="button"
-                  onClick={clearSavedCoords}
+                  onClick={() => void clearSavedCoords()}
                   className="text-xs font-medium text-text-muted underline-offset-2 hover:text-text-primary hover:underline"
                 >
                   Clear saved coordinates

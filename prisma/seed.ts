@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { DEMO_USER_EMAIL, DEMO_USER_PASSWORD } from "../src/lib/demo-account";
+import { DEMO_WARDROBE_ROWS } from "../src/lib/seed-demo-wardrobe";
 import { DEFAULT_INSPIRATIONS } from "../src/lib/seed-inspo";
 
 const prisma = new PrismaClient();
@@ -41,6 +42,30 @@ async function main() {
         name: row.name,
         imageUrl: row.imageUrl,
         tags: row.tags,
+      })),
+    });
+  }
+
+  const clothingCount = await prisma.clothingItem.count({
+    where: { userId: user.id },
+  });
+  if (clothingCount === 0) {
+    const dateAdded = new Date();
+    await prisma.clothingItem.createMany({
+      data: DEMO_WARDROBE_ROWS.map((row) => ({
+        userId: user.id,
+        name: row.name,
+        category: row.category,
+        color: row.color,
+        colorHex: row.colorHex,
+        seasons: row.seasons,
+        styles: row.styles,
+        imageUrl: row.imageUrl,
+        warmthLevel: row.warmthLevel,
+        waterproof: row.waterproof,
+        favorite: row.favorite,
+        dateAdded,
+        wearCount: 0,
       })),
     });
   }

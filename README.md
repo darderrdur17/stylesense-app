@@ -144,6 +144,8 @@ Use these so you stay on free or low-cost plans while building. Limits change ov
 
 StyleSense uses **Prisma** + **PostgreSQL** for data and **Auth.js (NextAuth v5)** for email/password sessions. You only need a connection string and a signing secret locally; production also needs **`AUTH_URL`**.
 
+**Data storage:** With `DATABASE_URL` pointing at your Postgres host (e.g. Supabase), **sign-up creates a `User` row**, and **wardrobe items, memories, trips, and profile changes** are saved through the `/api/*` routes into the same database—nothing is stored only in the browser for those features.
+
 ### A. PostgreSQL (recommended: Supabase or Neon)
 
 **Supabase uses two URLs in `.env`:**
@@ -267,7 +269,7 @@ To **skip** seeding (e.g. CI): `SEED_DEMO_ACCOUNT=false npm run db:seed`.
 | `npm run db:migrate` | Create/apply migrations in development |
 | `npm run db:deploy` | Apply migrations in production (`migrate deploy`) |
 | `npm run db:studio` | Open Prisma Studio |
-| `npm run db:seed` | Create/update demo user (`demo@stylesense.app`) + default inspirations |
+| `npm run db:seed` | Create/update demo user (`demo@stylesense.app`) + inspirations + sample wardrobe when empty |
 
 ---
 

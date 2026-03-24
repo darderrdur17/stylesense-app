@@ -1,20 +1,24 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   Droplets,
   Heart,
   ImageIcon,
   MapPin,
+  Navigation,
   Plane,
   RefreshCw,
   Shirt,
   ThumbsDown,
   ThumbsUp,
   Wind,
+  X,
 } from "lucide-react";
 import { useDisplayUser } from "@/hooks/useDisplayUser";
+import { requestGeolocationAndSaveProfile } from "@/lib/client-location";
 import { useStore } from "@/lib/store";
 import { getCurrentWeather } from "@/lib/weather";
 import type { ClothingItem, OutfitMemory, WeatherData } from "@/lib/types";
@@ -27,6 +31,8 @@ import {
   getWeatherEmoji,
   suggestOutfit,
 } from "@/lib/utils";
+
+const LOCATION_PROMPT_KEY = "stylesense-location-prompt-dismissed";
 
 function DashboardSkeleton() {
   return (
@@ -98,6 +104,12 @@ export default function AppDashboardPage() {
   const memories = useStore((s) => s.memories);
   const trips = useStore((s) => s.trips);
   const submitOutfitFeedback = useStore((s) => s.submitOutfitFeedback);
+  const setUser = useStore((s) => s.setUser);
+
+  const [locationPromptDismissed, setLocationPromptDismissed] = useState(false);
+  const [locationPromptReady, setLocationPromptReady] = useState(false);
+  const [locationBusy, setLocationBusy] = useState(false);
+  const [locationErr, setLocationErr] = useState<string | null>(null);
 
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(true);
@@ -109,6 +121,14 @@ export default function AppDashboardPage() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!mounted || typeof window === "undefined") return;
+    setLocationPromptDismissed(
+      window.localStorage.getItem(LOCATION_PROMPT_KEY) === "1"
+    );
+    setLocationPromptReady(true);
+  }, [mounted]);
 
   useEffect(() => {
     if (!mounted) return;
@@ -177,6 +197,34 @@ export default function AppDashboardPage() {
 
   const unit = user.temperatureUnit;
 
+  const showLocationBanner =
+    locationPromptReady &&
+    hydrated &&
+    (profileLat == null ||
+      profileLng == null ||
+      !Number.isFinite(profileLat) ||
+      !Number.isFinite(profileLng)) &&
+    !locationPromptDismissed;
+
+  const dismissLocationBanner = () => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(LOCATION_PROMPT_KEY, "1");
+    }
+    setLocationPromptDismissed(true);
+  };
+
+  const enableLocationFromDashboard = async () => {
+    setLocationErr(null);
+    setLocationBusy(true);
+    const result = await requestGeolocationAndSaveProfile(setUser, {
+      fallbackLocationLabel: displayLocation,
+    });
+    setLocationBusy(false);
+    if (!result.ok) {
+      setLocationErr(result.error ?? "Could not enable location.");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-7xl space-y-8 px-4 py-8">
@@ -193,6 +241,61 @@ export default function AppDashboardPage() {
           </h1>
           <p className="mt-2 text-text-secondary">Here is what is happening with your style today.</p>
         </motion.header>
+
+        {showLocationBanner && (
+          <motion.section
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35 }}
+            className="rounded-2xl border border-primary/25 bg-primary/5 p-4 shadow-sm md:p-5"
+            aria-labelledby="location-prompt-title"
+          >
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                  <MapPin className="h-5 w-5" aria-hidden />
+                </div>
+                <div>
+                  <h2 id="location-prompt-title" className="text-base font-semibold text-text-primary">
+                    Use your location for local weather
+                  </h2>
+                  <p className="mt-1 text-sm text-text-secondary">
+                    Allow location access so the dashboard matches conditions where you are. You can
+                    change this anytime in{" "}
+                    <Link href="/app/profile" className="font-medium text-primary underline-offset-2 hover:underline">
+                      Profile
+                    </Link>
+                    .
+                  </p>
+                  {locationErr && (
+                    <p className="mt-2 text-xs text-danger" role="alert">
+                      {locationErr}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => void enableLocationFromDashboard()}
+                  disabled={locationBusy}
+                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <Navigation className="h-4 w-4" aria-hidden />
+                  {locationBusy ? "Requesting…" : "Enable location"}
+                </button>
+                <button
+                  type="button"
+                  onClick={dismissLocationBanner}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-2 text-sm font-medium text-text-secondary transition hover:border-primary/30 hover:text-text-primary"
+                >
+                  <X className="h-4 w-4" aria-hidden />
+                  Not now
+                </button>
+              </div>
+            </div>
+          </motion.section>
+        )}
 
         <motion.section
           initial={{ opacity: 0, y: 16 }}
