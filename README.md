@@ -53,7 +53,7 @@ After pulling schema changes, sync the database: `npx prisma db push` or `npx pr
 
 - **Node.js** 20+ (recommended)
 - **npm** (or pnpm / yarn)
-- **PostgreSQL** database (local or hosted, e.g. [Neon](https://neon.tech))
+- **PostgreSQL** database (local or hosted, e.g. [Supabase](https://supabase.com) or [Neon](https://neon.tech))
 
 ---
 
@@ -77,7 +77,7 @@ For **database + auth in detail**, follow **[PostgreSQL and Auth.js setup](#post
 
 4. **Environment files**
 
-   - Create **`.env`** with **`DATABASE_URL`** only (Prisma CLI reads `.env` by default; without it, `prisma db push` fails).
+   - Create **`.env`** with **`DATABASE_URL`** and **`DIRECT_URL`** (Prisma CLI reads `.env` by default; see [§ A](#a-postgresql-recommended-supabase-or-neon)).
    - Create **`.env.local`** with **`AUTH_SECRET`** (`openssl rand -base64 32`) and any optional keys below.
 
    See **`.env.example`** for all variable names. Copy it and split into `.env` / `.env.local` as needed.
@@ -112,7 +112,7 @@ Everything the app can talk to outside your machine. Only **PostgreSQL** and **A
 
 | # | Service | Used for | Key / configuration | Required? |
 |---|---------|----------|---------------------|-----------|
-| 1 | **PostgreSQL** | All app data (users, wardrobe, trips, …) | `DATABASE_URL` | **Yes** |
+| 1 | **PostgreSQL** | All app data (users, wardrobe, trips, …) | `DATABASE_URL`, `DIRECT_URL` | **Yes** |
 | 2 | **Auth.js / NextAuth** | Sessions and JWT signing | `AUTH_SECRET` | **Yes** (prod) |
 | 3 | **Auth.js** | Correct callbacks in production | `AUTH_URL` (e.g. `https://yoursite.vercel.app`) | **Yes** on Vercel |
 | 4 | **[Open-Meteo](https://open-meteo.com/)** | **Current weather**, **multi-day forecast**, **city → coordinates**, **historical** memories, **reverse** geocode (EXIF) | *No API key* | Public API; falls back to **mock** data only if geocoding/network fails |
@@ -132,7 +132,7 @@ Use these so you stay on free or low-cost plans while building. Limits change ov
 
 | Service | Free / low-cost option | Notes |
 |---------|------------------------|--------|
-| **PostgreSQL** | [Neon](https://neon.tech) free tier, or [Supabase](https://supabase.com) free tier | Serverless Postgres; copy **connection string** with `?sslmode=require` if shown. |
+| **PostgreSQL** | [Supabase](https://supabase.com) or [Neon](https://neon.tech) free tier | Supabase: **transaction** + **session** pooler URLs in § A. Neon: duplicate one URL for both vars. |
 | **Open-Meteo** | Always free (non-commercial friendly) | No key; **current + forecast + geocoding + historical** weather in this app. |
 | **Google Gemini** | [Google AI Studio](https://aistudio.google.com/apikey) | Free tier with **rate limits**; fine for testing garment detection. |
 | **OpenAI** | Not permanently free | Optional fallback for garment AI; prefer **Gemini** if you want $0. |
@@ -144,30 +144,52 @@ Use these so you stay on free or low-cost plans while building. Limits change ov
 
 StyleSense uses **Prisma** + **PostgreSQL** for data and **Auth.js (NextAuth v5)** for email/password sessions. You only need a connection string and a signing secret locally; production also needs **`AUTH_URL`**.
 
-### A. PostgreSQL (recommended: Neon free tier)
+### A. PostgreSQL (recommended: Supabase or Neon)
 
-1. Go to **[neon.tech](https://neon.tech)** → sign up → **Create project** (pick a region close to you).
-2. Open your project → **Dashboard** → find **Connection string** (URI format).
-3. It should look like:  
-   `postgresql://USER:PASSWORD@HOST.neon.tech/neondb?sslmode=require`  
-   Copy it exactly (include `sslmode=require` if Neon shows it).
+**Supabase uses two URLs in `.env`:**
 
-4. In **`stylesense-app/.env`** (create the file if needed), set:
+| Variable | Use | Typical Supabase source |
+|----------|-----|-------------------------|
+| **`DATABASE_URL`** | App runtime (Next.js / Prisma Client) | **Transaction pooler**, port **6543** + `?pgbouncer=true&connection_limit=1&sslmode=require` |
+| **`DIRECT_URL`** | `prisma db push`, `migrate`, introspection | **Session pooler**, same pooler host, port **5432** + `?sslmode=require` |
+
+**Why two?** The transaction pooler is not meant for schema DDL. If you run **`npm run db:push`** with only **`DATABASE_URL` (6543)**, the command can **hang** or fail. Prisma needs **`DIRECT_URL`** pointing at the **session** pooler (**5432**), per [Prisma + Supabase](https://www.prisma.io/docs/guides/database/supabase).
+
+Turn on **Use IPv4 connection (Shared Pooler)** in the dashboard if you need IPv4.
+
+**If `db push` fails with `P1001` on port 5432:** your network may block that port — try **phone hotspot** or another Wi‑Fi for the one-time `npm run db:push`.
+
+#### Option 1 — Supabase (recommended)
+
+1. Go to **[supabase.com](https://supabase.com)** → **New project** (pick a region and set a database password).
+2. Open **Project Settings → Database** → **Connect**.
+3. With **Use IPv4 connection (Shared Pooler)** on if needed, copy **Transaction pooler** (6543) and **Session pooler** (5432).
+4. In **`stylesense-app/.env`**:
 
    ```env
-   DATABASE_URL="postgresql://...paste-here..."
+   DATABASE_URL="postgresql://postgres.<project-ref>:YOUR_PASSWORD@aws-....pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1&sslmode=require"
+   DIRECT_URL="postgresql://postgres.<project-ref>:YOUR_PASSWORD@aws-....pooler.supabase.com:5432/postgres?sslmode=require"
    ```
 
-5. From the **`stylesense-app`** folder, create tables:
+   URL-encode special characters in the password if needed.
 
-   ```bash
-   npm run db:push
-   ```
+5. From **`stylesense-app`**, create tables: `npm run db:push` (or `npx prisma db push`).
 
-   You should see Prisma sync the schema without errors.
+**If `db push` fails with `P1001` on port `5432`:** your network is probably blocking outbound PostgreSQL (session pooler). The app can still use port **`6543`** for normal queries. Either use **phone hotspot** / another network and run `npm run db:push` once, **or** bootstrap without Prisma reaching port 5432:
 
-**Alternative — local Postgres:** install Postgres, run `createdb stylesense`, then use  
-`postgresql://YOUR_MAC_USERNAME@localhost:5432/stylesense` (adjust user/password if needed).
+1. In Supabase: **SQL Editor** → **New query**.
+2. Paste the contents of **`prisma/supabase-init-from-empty.sql`** (regenerate anytime with `npm run db:generate-sql` after schema changes).
+3. Run the query. Tables are created; **`npm run dev`** uses **`DATABASE_URL`** (6543) and should work.
+
+#### Option 2 — Neon
+
+1. **[neon.tech](https://neon.tech)** → create a project → copy the **connection string** (URI, usually includes `sslmode=require`).
+2. Set **`DATABASE_URL`** and **`DIRECT_URL`** to the **same** string.
+
+3. Run `npm run db:push`.
+
+**Alternative — local Postgres:** install Postgres, run `createdb stylesense`, then set **`DATABASE_URL`** and **`DIRECT_URL`** to the same URI, e.g.  
+`postgresql://USER:PASSWORD@localhost:5432/stylesense`.
 
 ### B. Auth.js — `AUTH_SECRET`
 
@@ -212,7 +234,7 @@ Locally you can **omit** `AUTH_URL`; Next.js defaults to `http://localhost:3000`
 2. Open **`/register`**, create an account.
 3. Sign in at **`/login`**, then open **`/app`**.
 
-If registration fails, check the terminal for errors and confirm **`DATABASE_URL`** and **`AUTH_SECRET`** are loaded (and that **`npm run db:push`** succeeded).
+If registration fails, check the terminal for errors and confirm **`DATABASE_URL`**, **`DIRECT_URL`**, and **`AUTH_SECRET`** are loaded (and that **`npm run db:push`** succeeded).
 
 ### E. Demo account (optional)
 
@@ -255,7 +277,8 @@ Never commit real secrets. See **`.env.example`**.
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `DATABASE_URL` | **Yes** | PostgreSQL connection string. Put in **`.env`** so Prisma CLI picks it up. |
+| `DATABASE_URL` | **Yes** | App queries: Supabase **transaction pooler** `6543` + Prisma params, or Neon/local URI. Put in **`.env`**. |
+| `DIRECT_URL` | **Yes** | Prisma CLI (`db push`, migrate): Supabase **session pooler** `5432`, or **same as `DATABASE_URL`** for Neon/local. Put in **`.env`**. |
 | `AUTH_SECRET` | **Yes** (prod) | JWT/session signing (`openssl rand -base64 32`). Typically **`.env.local`**. |
 | `AUTH_URL` | **Yes** on Vercel | Canonical URL, e.g. `https://your-app.vercel.app` (no trailing slash). |
 | `BLOB_READ_WRITE_TOKEN` | No | [Vercel Blob](https://vercel.com/docs/storage/vercel-blob); data URL fallback for small images without it. |
@@ -276,12 +299,12 @@ Never commit real secrets. See **`.env.example`**.
 1. Push the repo to GitHub.
 2. **Import** the repo in Vercel → framework **Next.js**.
 3. Set **Root Directory** to **`stylesense-app`** if the repository root is the parent `StyleSense` folder.
-4. Add **Environment Variables** for Production (and Preview if you use them): `DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL` (use your real `.vercel.app` or custom domain URL), then optional keys from the table above.
+4. Add **Environment Variables** for Production (and Preview if you use them): `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`, `AUTH_URL` (use your real `.vercel.app` or custom domain URL), then optional keys from the table above.
 5. **Deploy**, then sync the production database from your machine:
 
    ```bash
-   DATABASE_URL="your-production-postgres-url" npx prisma db push
-   DATABASE_URL="your-production-postgres-url" npm run db:seed
+   DATABASE_URL="your-pooled-url" DIRECT_URL="your-session-or-same-url" npx prisma db push
+   DATABASE_URL="your-pooled-url" DIRECT_URL="your-session-or-same-url" npm run db:seed
    ```
 
    Or `npx prisma migrate deploy` if you ship migration files.

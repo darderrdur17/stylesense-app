@@ -9,6 +9,7 @@
     "lint": "eslint",
     "postinstall": "prisma generate",
     "db:push": "prisma db push",
+    "db:generate-sql": "prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script -o prisma/supabase-init-from-empty.sql",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
