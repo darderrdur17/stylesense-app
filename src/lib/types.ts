@@ -82,6 +82,8 @@ export interface WeatherData {
   icon: string;
   high: number;
   low: number;
+  /** When weather was resolved from lat/lng, a human-readable place for the UI. */
+  locationLabel?: string;
 }
 
 export interface TripPlan {

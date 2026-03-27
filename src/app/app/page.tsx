@@ -240,7 +240,7 @@ export default function AppDashboardPage() {
           <h1 className="text-3xl font-bold tracking-tight text-text-primary md:text-4xl">
             {getGreeting()},{" "}
             <span className="gradient-text">
-              {(displayName?.trim() && displayName.split(" ")[0]) || "there"}
+              {displayName?.trim() || "there"}
             </span>
           </h1>
           <p className="mt-2 text-text-secondary">Here is what is happening with your style today.</p>
@@ -311,7 +311,15 @@ export default function AppDashboardPage() {
             <div className="pointer-events-none absolute -bottom-12 -left-12 h-40 w-40 rounded-full bg-black/10 blur-2xl" />
             <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
               <div>
-                <p className="text-sm font-medium text-white/80">{displayLocation}</p>
+                <p className="text-sm font-medium text-white/80">
+                  {weather?.locationLabel ??
+                    (profileLat != null &&
+                    profileLng != null &&
+                    weatherLoading &&
+                    !weatherError
+                      ? "Locating…"
+                      : displayLocation)}
+                </p>
                 {weatherLoading ? (
                   <div className="mt-3 h-14 w-40 animate-pulse rounded-lg bg-white/20" />
                 ) : weatherError || !weather ? (

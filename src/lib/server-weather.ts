@@ -1,4 +1,5 @@
 import type { WeatherCondition, WeatherData } from "@/lib/types";
+import { reverseGeocodePlace } from "@/lib/server-geocode";
 
 /** Open-Meteo geocoding → lat/lon (no API key). */
 async function geocodeCity(
@@ -150,7 +151,9 @@ export async function fetchCurrentWeatherByCity(city: string): Promise<WeatherDa
 }
 
 export async function fetchCurrentWeatherByCoords(lat: number, lng: number): Promise<WeatherData> {
-  return fetchCurrentWeatherAtCoords(lat, lng, "your location");
+  const base = await fetchCurrentWeatherAtCoords(lat, lng, "your location");
+  const locationLabel = await reverseGeocodePlace(lat, lng);
+  return locationLabel ? { ...base, locationLabel } : base;
 }
 
 async function fetchForecastAtCoords(
