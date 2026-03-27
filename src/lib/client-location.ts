@@ -1,28 +1,7 @@
 import type { SetUserResult, UserProfile } from "./types";
+import { reverseGeocodeOpenMeteoClient } from "./open-meteo-reverse-client";
 
 type SetUserFn = (updates: Partial<UserProfile>) => Promise<SetUserResult>;
-
-/** Same resolver as the server (Open-Meteo), callable from the browser if the app API fails. */
-async function reverseGeocodeOpenMeteo(
-  latitude: number,
-  longitude: number
-): Promise<string | null> {
-  try {
-    const res = await fetch(
-      `https://geocoding-api.open-meteo.com/v1/reverse?latitude=${encodeURIComponent(String(latitude))}&longitude=${encodeURIComponent(String(longitude))}&language=en`
-    );
-    if (!res.ok) return null;
-    const data = (await res.json()) as {
-      results?: { name: string; admin1?: string; country?: string }[];
-    };
-    const r = data.results?.[0];
-    if (!r) return null;
-    const parts = [r.name, r.admin1, r.country].filter(Boolean);
-    return parts.length ? parts.join(", ") : r.name;
-  } catch {
-    return null;
-  }
-}
 
 async function resolvePlaceLabel(
   lat: number,
@@ -39,7 +18,7 @@ async function resolvePlaceLabel(
   } catch {
     /* try direct */
   }
-  const direct = await reverseGeocodeOpenMeteo(lat, lng);
+  const direct = await reverseGeocodeOpenMeteoClient(lat, lng);
   if (direct?.trim()) return direct.trim();
   const hint = fallbackHint.trim();
   if (hint) return hint;

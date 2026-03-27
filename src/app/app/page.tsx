@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useDisplayUser } from "@/hooks/useDisplayUser";
 import { useIsClient } from "@/hooks/useIsClient";
+import { useResolvedPlaceFromCoords } from "@/hooks/useResolvedPlaceFromCoords";
 import { requestGeolocationAndSaveProfile } from "@/lib/client-location";
 import { useStore } from "@/lib/store";
 import { getCurrentWeather } from "@/lib/weather";
@@ -101,6 +102,8 @@ export default function AppDashboardPage() {
     latitude: profileLat,
     longitude: profileLng,
   } = useDisplayUser();
+  const { label: coordsPlaceLabel, loading: coordsPlaceLoading } =
+    useResolvedPlaceFromCoords(profileLat, profileLng);
   const wardrobe = useStore((s) => s.wardrobe);
   const memories = useStore((s) => s.memories);
   const trips = useStore((s) => s.trips);
@@ -175,6 +178,13 @@ export default function AppDashboardPage() {
     () => wardrobe.filter((i) => i.favorite).length,
     [wardrobe]
   );
+
+  const weatherLocationLine =
+    profileLat != null && profileLng != null
+      ? coordsPlaceLabel ??
+        weather?.locationLabel ??
+        (coordsPlaceLoading || weatherLoading ? "Locating…" : displayLocation)
+      : (weather?.locationLabel ?? displayLocation);
 
   const sendSuggestionFeedback = async (liked: boolean) => {
     if (!weather || suggestedOutfit.length === 0) return;
@@ -312,13 +322,7 @@ export default function AppDashboardPage() {
             <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
               <div>
                 <p className="text-sm font-medium text-white/80">
-                  {weather?.locationLabel ??
-                    (profileLat != null &&
-                    profileLng != null &&
-                    weatherLoading &&
-                    !weatherError
-                      ? "Locating…"
-                      : displayLocation)}
+                  {weatherLocationLine}
                 </p>
                 {weatherLoading ? (
                   <div className="mt-3 h-14 w-40 animate-pulse rounded-lg bg-white/20" />

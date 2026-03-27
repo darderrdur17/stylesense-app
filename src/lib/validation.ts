@@ -71,6 +71,7 @@ export const weatherDataSchema = z.object({
   icon: z.string(),
   high: z.number(),
   low: z.number(),
+  locationLabel: z.string().max(200).optional(),
 });
 
 export const createMemorySchema = z.object({

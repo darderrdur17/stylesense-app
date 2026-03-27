@@ -146,8 +146,15 @@ async function fetchCurrentWeatherAtCoords(
  */
 export async function fetchCurrentWeatherByCity(city: string): Promise<WeatherData> {
   const coords = await geocodeCity(city);
-  if (!coords) return mockWeather(city);
-  return fetchCurrentWeatherAtCoords(coords.latitude, coords.longitude, city);
+  if (!coords) return { ...mockWeather(city), locationLabel: city.trim() };
+  const base = await fetchCurrentWeatherAtCoords(
+    coords.latitude,
+    coords.longitude,
+    city
+  );
+  const locationLabel =
+    (await reverseGeocodePlace(coords.latitude, coords.longitude)) ?? city.trim();
+  return { ...base, locationLabel };
 }
 
 export async function fetchCurrentWeatherByCoords(lat: number, lng: number): Promise<WeatherData> {
