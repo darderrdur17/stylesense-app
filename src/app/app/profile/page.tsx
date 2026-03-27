@@ -5,6 +5,7 @@ import { format, parseISO } from "date-fns";
 import { motion } from "framer-motion";
 import { Bell, Moon, Navigation, UserRound } from "lucide-react";
 import { requestGeolocationAndSaveProfile } from "@/lib/client-location";
+import { useIsClient } from "@/hooks/useIsClient";
 import { useStore } from "@/lib/store";
 import type { StyleTag } from "@/lib/types";
 import { cn, initialsFromName } from "@/lib/utils";
@@ -32,7 +33,7 @@ function ProfileSkeleton() {
 }
 
 export default function ProfilePage() {
-  const [mounted, setMounted] = useState(false);
+  const mounted = useIsClient();
   const hydrated = useStore((s) => s.hydrated);
   const user = useStore((s) => s.user);
   const wardrobe = useStore((s) => s.wardrobe);
@@ -54,18 +55,16 @@ export default function ProfilePage() {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
     if (!mounted) return;
-    setName(user.name);
-    setEmail(user.email);
-    setLocation(user.location);
-    setTemperatureUnit(user.temperatureUnit);
-    setPreferredStyles([...user.preferredStyles]);
-    setProfileLat(user.latitude ?? null);
-    setProfileLng(user.longitude ?? null);
+    queueMicrotask(() => {
+      setName(user.name);
+      setEmail(user.email);
+      setLocation(user.location);
+      setTemperatureUnit(user.temperatureUnit);
+      setPreferredStyles([...user.preferredStyles]);
+      setProfileLat(user.latitude ?? null);
+      setProfileLng(user.longitude ?? null);
+    });
   }, [mounted, user]);
 
   const handleUseCurrentLocation = async () => {

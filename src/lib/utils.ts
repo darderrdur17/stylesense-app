@@ -1,4 +1,4 @@
-import { ClothingItem, WeatherData, Season, Outfit } from "./types";
+import { ClothingItem, WeatherData, Season } from "./types";
 
 export function cn(...classes: (string | boolean | undefined | null)[]) {
   return classes.filter(Boolean).join(" ");

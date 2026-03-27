@@ -4,7 +4,6 @@
  * Catches errors in the root layout. Must define html/body; global CSS may not apply.
  */
 export default function GlobalError({
-  error,
   reset,
 }: {
   error: Error & { digest?: string };

@@ -7,7 +7,6 @@ import {
   MapPin,
   Sparkles,
   Star,
-  TrendingUp,
 } from "lucide-react";
 
 const showcaseCards = [
@@ -61,8 +60,8 @@ export function Showcase() {
             See StyleSense <span className="gradient-text">in Action</span>
           </h2>
           <p className="mt-4 text-lg text-text-secondary">
-            Real scenarios, real outfits. Here's what your AI stylist does for
-            you every day.
+            Real scenarios, real outfits.{" "}
+            {"Here's what your AI stylist does for you every day."}
           </p>
         </motion.div>
 

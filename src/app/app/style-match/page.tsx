@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ChevronDown, ChevronUp, ExternalLink, Sparkles } from "lucide-react";
+import { useIsClient } from "@/hooks/useIsClient";
 import { useStore } from "@/lib/store";
 import type { ClothingItem, StyleInspo, StyleTag } from "@/lib/types";
 import { creatorsForStyles } from "@/lib/creator-curated";
@@ -253,7 +254,7 @@ function InspoCard({
 }
 
 export default function StyleMatchPage() {
-  const [mounted, setMounted] = useState(false);
+  const mounted = useIsClient();
   const hydrated = useStore((s) => s.hydrated);
   const user = useStore((s) => s.user);
   const inspirations = useStore((s) => s.inspirations);
@@ -263,10 +264,6 @@ export default function StyleMatchPage() {
   const [vibeResults, setVibeResults] = useState<
     { item: ClothingItem; score: number }[]
   >([]);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const toggleTag = (tag: StyleTag) => {
     setSelectedTags((prev) =>

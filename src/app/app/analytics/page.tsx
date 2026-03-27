@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { BarChart3 } from "lucide-react";
 import {
@@ -21,6 +21,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { useIsClient } from "@/hooks/useIsClient";
 import { useStore } from "@/lib/store";
 import type { StyleTag } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -67,14 +68,10 @@ function AnalyticsSkeleton() {
 }
 
 export default function AnalyticsPage() {
-  const [mounted, setMounted] = useState(false);
+  const mounted = useIsClient();
   const hydrated = useStore((s) => s.hydrated);
   const wardrobe = useStore((s) => s.wardrobe);
   const feedbackStats = useStore((s) => s.feedbackStats);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const analytics = useMemo(() => {
     const totalItems = wardrobe.length;

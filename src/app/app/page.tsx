@@ -18,6 +18,7 @@ import {
   X,
 } from "lucide-react";
 import { useDisplayUser } from "@/hooks/useDisplayUser";
+import { useIsClient } from "@/hooks/useIsClient";
 import { requestGeolocationAndSaveProfile } from "@/lib/client-location";
 import { useStore } from "@/lib/store";
 import { getCurrentWeather } from "@/lib/weather";
@@ -91,7 +92,7 @@ function MemoryCard({ memory }: { memory: OutfitMemory }) {
 }
 
 export default function AppDashboardPage() {
-  const [mounted, setMounted] = useState(false);
+  const mounted = useIsClient();
   const hydrated = useStore((s) => s.hydrated);
   const user = useStore((s) => s.user);
   const {
@@ -119,38 +120,39 @@ export default function AppDashboardPage() {
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
     if (!mounted || typeof window === "undefined") return;
-    setLocationPromptDismissed(
-      window.localStorage.getItem(LOCATION_PROMPT_KEY) === "1"
-    );
-    setLocationPromptReady(true);
+    queueMicrotask(() => {
+      setLocationPromptDismissed(
+        window.localStorage.getItem(LOCATION_PROMPT_KEY) === "1"
+      );
+      setLocationPromptReady(true);
+    });
   }, [mounted]);
 
   useEffect(() => {
     if (!mounted) return;
     let cancelled = false;
-    setWeatherLoading(true);
-    setWeatherError(false);
-    const coords =
-      profileLat != null && profileLng != null
-        ? { lat: profileLat, lng: profileLng }
-        : null;
-    getCurrentWeather(displayLocation, coords)
-      .then((w) => {
-        if (!cancelled) {
-          setWeather(w);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setWeatherError(true);
-      })
-      .finally(() => {
-        if (!cancelled) setWeatherLoading(false);
-      });
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setWeatherLoading(true);
+      setWeatherError(false);
+      const coords =
+        profileLat != null && profileLng != null
+          ? { lat: profileLat, lng: profileLng }
+          : null;
+      getCurrentWeather(displayLocation, coords)
+        .then((w) => {
+          if (!cancelled) {
+            setWeather(w);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) setWeatherError(true);
+        })
+        .finally(() => {
+          if (!cancelled) setWeatherLoading(false);
+        });
+    });
     return () => {
       cancelled = true;
     };
@@ -158,6 +160,8 @@ export default function AppDashboardPage() {
 
   const suggestedOutfit = useMemo(() => {
     if (!weather || wardrobe.length === 0) return [];
+    // `outfitRefresh` forces new picks; `suggestOutfit` uses randomness.
+    void outfitRefresh;
     return suggestOutfit(wardrobe, weather);
   }, [wardrobe, weather, outfitRefresh]);
 
